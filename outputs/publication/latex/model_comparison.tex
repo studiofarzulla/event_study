@@ -1,0 +1,28 @@
+
+\begin{table}[htbp]
+\centering
+\caption{Model Comparison: AIC and BIC Statistics}
+\label{tab:model_comparison}
+\begin{tabular}{lcccccc}
+\hline
+\hline
+ & \multicolumn{2}{c}{GARCH(1,1)} & \multicolumn{2}{c}{TARCH(1,1)} & \multicolumn{2}{c}{TARCH-X} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+Crypto & AIC & BIC & AIC & BIC & AIC & BIC \\
+\hline
+BTC & 11904.0* & 11933.0 & 11905.6 & 11940.4 & 11906.0 & 11969.7 \\
+ETH & 13344.7* & 13373.7 & 13346.6 & 13381.3 & 13350.7 & 13414.4 \\
+XRP & 13324.3* & 13353.3 & 13325.1 & 13359.9 & 13330.7 & 13394.5 \\
+BNB & 11400.4* & 11428.8 & 11400.9 & 11435.1 & 11404.1 & 11466.7 \\
+LTC & 13779.8 & 13808.8 & 13773.6* & 13808.3 & 13774.4 & 13838.1 \\
+ADA & 14091.2* & 14120.2 & 14093.1 & 14127.9 & 14100.5 & 14164.2 \\
+\hline
+\hline
+\end{tabular}
+\begin{tablenotes}
+\small
+\item Note: * indicates the best model by AIC for each cryptocurrency.
+\item GARCH(1,1): Standard GARCH model. TARCH(1,1): Threshold ARCH with leverage effects.
+\item TARCH-X: TARCH with event dummies and sentiment variables.
+\end{tablenotes}
+\end{table}

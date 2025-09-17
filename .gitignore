@@ -1,0 +1,35 @@
+# Environment variables
+.env
+.env.local
+
+# API keys and secrets
+*.key
+config/secrets.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Logs
+*.log
+coingecko_fetcher.log
+
+# Data files (if sensitive)
+event_data/
+*.csv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
