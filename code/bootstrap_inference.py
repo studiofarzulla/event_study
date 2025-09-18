@@ -230,7 +230,7 @@ class BootstrapInference:
         """
         print(f"\nBootstrapping event coefficients ({n_bootstrap} replications)...")
 
-        # Import required modules
+        # Import required modules here to avoid circular import
         from garch_models import GARCHModels
         import warnings
         warnings.filterwarnings('ignore')
@@ -247,74 +247,61 @@ class BootstrapInference:
             return {'error': 'Baseline model failed to converge'}
 
         # Extract baseline coefficients
-        baseline_effects = baseline_model.event_effects
+        baseline_coeffs = {}
+        if baseline_model.event_effects:
+            baseline_coeffs.update(baseline_model.event_effects)
 
-        # Bootstrap results storage
-        bootstrap_results = {event: [] for event in event_columns if event in baseline_effects}
-
-        # Get baseline residuals and volatility
-        baseline_resid = baseline_model.residuals
-        baseline_vol = baseline_model.volatility
-
-        # Standardized residuals for bootstrapping
-        std_resid = baseline_resid / baseline_vol
-
-        print(f"Running bootstrap replications...")
-        successful_boots = 0
+        # Bootstrap replications
+        bootstrap_coeffs = {col: [] for col in event_columns}
+        convergence_count = 0
 
         for b in range(n_bootstrap):
-            if b % 20 == 0:
-                print(f"  Progress: {b}/{n_bootstrap}")
+            if b % 10 == 0:
+                print(f"  Progress: {b}/{n_bootstrap} replications...")
 
+            # Resample returns with replacement (block bootstrap for time series)
+            block_size = 10  # Use blocks of 10 days
+            n_blocks = len(returns) // block_size
+
+            indices = []
+            for _ in range(n_blocks):
+                block_start = np.random.randint(0, len(returns) - block_size)
+                indices.extend(range(block_start, block_start + block_size))
+
+            # Create bootstrap sample
+            bootstrap_data = data_with_events.iloc[indices].copy()
+
+            # Estimate model on bootstrap sample
             try:
-                # Bootstrap standardized residuals
-                boot_indices = np.random.choice(len(std_resid), size=len(std_resid), replace=True)
-                boot_std_resid = std_resid.iloc[boot_indices].values
-
-                # Reconstruct returns preserving volatility structure
-                boot_returns = boot_std_resid * baseline_vol.values
-
-                # Create bootstrap dataset preserving event structure
-                boot_data = data_with_events.copy()
-                boot_data.loc[returns.index, 'returns_winsorized'] = boot_returns
-
-                # Fit TARCH-X to bootstrap sample
-                boot_estimator = GARCHModels(boot_data, f'bootstrap_{b}')
+                boot_estimator = GARCHModels(bootstrap_data, 'bootstrap')
                 boot_model = boot_estimator.estimate_tarch_x(use_individual_events=False)
 
-                if boot_model.convergence:
-                    # Store event coefficients
-                    for event in event_columns:
-                        if event in boot_model.event_effects:
-                            bootstrap_results[event].append(boot_model.event_effects[event])
-                    successful_boots += 1
+                if boot_model.convergence and boot_model.event_effects:
+                    for col in event_columns:
+                        if col in boot_model.event_effects:
+                            bootstrap_coeffs[col].append(boot_model.event_effects[col])
+                    convergence_count += 1
+            except:
+                continue  # Skip failed bootstrap samples
 
-            except Exception:
-                continue  # Skip failed bootstrap iterations
-
-        print(f"Successful bootstrap replications: {successful_boots}/{n_bootstrap}")
+        print(f"Bootstrap completed: {convergence_count}/{n_bootstrap} converged")
 
         # Calculate confidence intervals
-        confidence_intervals = {}
-
-        for event, boot_values in bootstrap_results.items():
-            if len(boot_values) > 10:  # Need sufficient samples
-                boot_array = np.array(boot_values)
-                confidence_intervals[event] = {
-                    'baseline': baseline_effects.get(event, np.nan),
-                    'mean': np.mean(boot_array),
-                    'std': np.std(boot_array),
-                    'ci_95_lower': np.percentile(boot_array, 2.5),
-                    'ci_95_upper': np.percentile(boot_array, 97.5),
-                    'ci_90_lower': np.percentile(boot_array, 5),
-                    'ci_90_upper': np.percentile(boot_array, 95),
-                    'n_samples': len(boot_array)
+        ci_results = {}
+        for col in event_columns:
+            if len(bootstrap_coeffs[col]) > 0:
+                ci_results[col] = {
+                    'baseline': baseline_coeffs.get(col, np.nan),
+                    'bootstrap_mean': np.mean(bootstrap_coeffs[col]),
+                    'bootstrap_std': np.std(bootstrap_coeffs[col]),
+                    'ci_lower': np.percentile(bootstrap_coeffs[col], 2.5),
+                    'ci_upper': np.percentile(bootstrap_coeffs[col], 97.5)
                 }
 
         return {
-            'confidence_intervals': confidence_intervals,
-            'successful_replications': successful_boots,
-            'convergence_rate': successful_boots / n_bootstrap
+            'baseline_coefficients': baseline_coeffs,
+            'bootstrap_results': ci_results,
+            'convergence_rate': convergence_count / n_bootstrap
         }
 
     def create_bootstrap_table(self, bootstrap_results: Dict) -> pd.DataFrame:

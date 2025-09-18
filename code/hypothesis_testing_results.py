@@ -34,7 +34,7 @@ class HypothesisTestingResults:
 
     def __init__(self):
         """Initialize the hypothesis testing framework."""
-        self.prep = DataPreparation()
+        self.prep = DataPreparation(data_path="../data")
         self.events = self.prep.load_events()
         self.crypto_data = {}
         self.model_results = {}
@@ -94,10 +94,25 @@ class HypothesisTestingResults:
             crypto_models['TARCH-X'] = tarchx
             if tarchx.convergence:
                 print(f"    Converged: AIC={tarchx.aic:.2f}")
-                if hasattr(tarchx, 'event_effects'):
+
+                if hasattr(tarchx, 'event_effects') and tarchx.event_effects:
+                    print('    Event variance coefficients:')
                     for event, coef in tarchx.event_effects.items():
-                        vol_impact = (np.exp(coef) - 1) * 100
-                        print(f"    {event}: {coef:+.4f} ({vol_impact:+.1f}% volatility)")
+                        p_val = None
+                        if hasattr(tarchx, 'event_pvalues'):
+                            p_val = tarchx.event_pvalues.get(event)
+                        elif hasattr(tarchx, 'pvalues'):
+                            p_val = tarchx.pvalues.get(event)
+                        sig = ''
+                        if p_val is not None and not np.isnan(p_val):
+                            if p_val < 0.01:
+                                sig = '***'
+                            elif p_val < 0.05:
+                                sig = '**'
+                            elif p_val < 0.10:
+                                sig = '*'
+                        p_display = f", p={p_val:.3f}" if p_val is not None and not np.isnan(p_val) else ''
+                        print(f"    {event}: {coef:+.4f}{sig}{p_display}")
 
             self.model_results[crypto] = crypto_models
 

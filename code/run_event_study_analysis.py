@@ -66,6 +66,22 @@ def main(run_robustness: bool = False,
     # Suppress warnings for cleaner output
     warnings.filterwarnings('ignore')
 
+    # Validate data files exist
+    data_path = Path('../data')
+    required_files = ['btc.csv', 'eth.csv', 'events.csv', 'gdelt.csv']
+    missing_files = []
+
+    for file in required_files:
+        if not (data_path / file).exists():
+            missing_files.append(file)
+            print(f"ERROR: Required file {file} not found in {data_path}")
+
+    if missing_files:
+        print(f"\nMissing {len(missing_files)} required files. Please ensure all data files are present.")
+        return None
+
+    print("[OK] All required data files found")
+
     # Create output directory
     output_dir = Path('../outputs/analysis_results')
     output_dir.mkdir(parents=True, exist_ok=True)

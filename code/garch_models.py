@@ -42,6 +42,8 @@ class ModelResults:
     leverage_effect: Optional[float] = None
     event_effects: Optional[Dict[str, float]] = None
     sentiment_effects: Optional[Dict[str, float]] = None
+    event_std_errors: Optional[Dict[str, float]] = None
+    event_pvalues: Optional[Dict[str, float]] = None
 
 
 class GARCHModels:
@@ -175,23 +177,15 @@ class GARCHModels:
             print(f"  [FAIL] TARCH(1,1) estimation failed: {str(e)}")
             return self._create_failed_result('TARCH(1,1)')
 
+
+    
+
+
     def estimate_tarch_x(self, use_individual_events: bool = True,
                         include_sentiment: bool = True) -> ModelResults:
-        """
-        Estimate TARCH-X model with exogenous variables in variance equation.
-        Uses manual implementation for proper variance equation specification.
-
-        Args:
-            use_individual_events: If True, use individual event dummies;
-                                 if False, use aggregated type dummies
-            include_sentiment: Whether to include sentiment variables
-
-        Returns:
-            ModelResults object with estimation results
-        """
+        """Estimate TARCH-X model with exogenous variables in the variance equation."""
         print(f"Estimating TARCH-X for {self.crypto}...")
 
-        # Prepare exogenous variables
         exog_vars = self._prepare_exogenous_variables(
             use_individual_events,
             include_sentiment
@@ -234,14 +228,12 @@ class GARCHModels:
                 residuals=manual_results.residuals,
                 leverage_effect=manual_results.leverage_effect,
                 event_effects=manual_results.event_effects,
-                sentiment_effects=manual_results.sentiment_effects
+                sentiment_effects=manual_results.sentiment_effects,
+                event_std_errors={k: manual_results.std_errors.get(k, np.nan)
+                                 for k in manual_results.event_effects.keys()},
+                event_pvalues={k: manual_results.pvalues.get(k, np.nan)
+                              for k in manual_results.event_effects.keys()}
             )
-
-            # Add special attributes for event analysis compatibility
-            results.event_std_errors = {k: manual_results.std_errors.get(k, np.nan)
-                                       for k in manual_results.event_effects.keys()}
-            results.event_pvalues = {k: manual_results.pvalues.get(k, np.nan)
-                                    for k in manual_results.event_effects.keys()}
 
             # Display key results during estimation
             print(f"  [OK] Manual TARCH-X converged in {manual_results.iterations} iterations")
@@ -252,11 +244,22 @@ class GARCHModels:
                 print(f"  Sentiment coefficients: {len(manual_results.sentiment_effects)}")
 
             # Display key event effects
-            for event, coef in manual_results.event_effects.items():
-                vol_impact = (np.exp(coef) - 1) * 100 if abs(coef) < 1 else coef * 100
-                p_val = manual_results.pvalues.get(event, np.nan)
-                sig_stars = "***" if p_val < 0.01 else "**" if p_val < 0.05 else "*" if p_val < 0.10 else ""
-                print(f"    {event}: {coef:+.4f}{sig_stars} ({vol_impact:+.1f}% volatility)")
+            if manual_results.event_effects:
+                print("  Event variance coefficients:")
+                for name, coef in manual_results.event_effects.items():
+                    p_val = manual_results.pvalues.get(name, np.nan)
+                    sig_stars = "***" if p_val < 0.01 else "**" if p_val < 0.05 else "*" if p_val < 0.10 else ""
+                    p_display = f", p={p_val:.3f}" if not np.isnan(p_val) else ""
+                    print(f"    {name}: {coef:+.4f}{sig_stars}{p_display}")
+
+            # Display sentiment effects if present
+            if manual_results.sentiment_effects:
+                print("  Sentiment variance coefficients:")
+                for name, coef in manual_results.sentiment_effects.items():
+                    p_val = manual_results.pvalues.get(name, np.nan)
+                    sig_stars = "***" if p_val < 0.01 else "**" if p_val < 0.05 else "*" if p_val < 0.10 else ""
+                    p_display = f", p={p_val:.3f}" if not np.isnan(p_val) else ""
+                    print(f"    {name}: {coef:+.4f}{sig_stars}{p_display}")
 
             # Display leverage effect
             if manual_results.leverage_effect and not np.isnan(manual_results.leverage_effect):
@@ -270,7 +273,6 @@ class GARCHModels:
         except Exception as e:
             print(f"  [FAIL] TARCH-X estimation failed: {str(e)}")
 
-            # Fallback strategy: try with aggregated event dummies
             if use_individual_events and not self._is_fallback_attempt:
                 print("  -> Attempting fallback with aggregated event type dummies...")
                 self._is_fallback_attempt = True
@@ -329,13 +331,10 @@ class GARCHModels:
         # Add event dummies
         if self.has_events:
             if use_individual_events:
-                # Use individual event dummies
-                event_cols = [col for col in self.data.columns
-                            if col.startswith('D_event_') or col == 'D_SEC_enforcement_2023']
+                event_cols = [col for col in self.data.columns if col.startswith('D_')]
                 if event_cols:
-                    exog_vars.extend(event_cols)
+                    exog_vars.extend(sorted(event_cols))
             else:
-                # Use aggregated type dummies
                 if 'D_infrastructure' in self.data.columns:
                     exog_vars.append('D_infrastructure')
                 if 'D_regulatory' in self.data.columns:
