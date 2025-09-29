@@ -145,7 +145,9 @@ class TARCHXEstimator:
         
         # Initialize arrays
         variance = np.zeros(self.n_obs)
-        residuals = self.returns.values.copy()
+        # Demean returns to create proper residuals for GARCH estimation
+        mean_return = self.returns.mean()
+        residuals = (self.returns - mean_return).values
         
         # Initialize variance (unconditional variance estimate)
         variance[0] = np.var(self.returns)

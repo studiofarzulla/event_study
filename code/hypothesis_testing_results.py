@@ -34,7 +34,7 @@ class HypothesisTestingResults:
 
     def __init__(self):
         """Initialize the hypothesis testing framework."""
-        self.prep = DataPreparation(data_path="../data")
+        self.prep = DataPreparation()  # Will use config.DATA_DIR by default
         self.events = self.prep.load_events()
         self.crypto_data = {}
         self.model_results = {}
@@ -143,8 +143,8 @@ class HypothesisTestingResults:
                     infra_coef = model.event_effects.get('D_infrastructure', 0)
                     reg_coef = model.event_effects.get('D_regulatory', 0)
 
-                    infra_vol = (np.exp(infra_coef) - 1) * 100
-                    reg_vol = (np.exp(reg_coef) - 1) * 100
+                    infra_vol = infra_coef * 100  # Linear variance effect
+                    reg_vol = reg_coef * 100  # Linear variance effect
 
                     print(f"\n{crypto.upper()}:")
                     print(f"  Infrastructure: {infra_coef:+.4f} ({infra_vol:+.1f}% volatility)")

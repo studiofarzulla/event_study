@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timedelta
 import warnings
 from pathlib import Path
+from . import config
 
 
 class DataPreparation:
@@ -17,14 +18,14 @@ class DataPreparation:
     Handles price data, event dummies, and sentiment merging.
     """
 
-    def __init__(self, data_path: str = "../data"):
+    def __init__(self, data_path: Optional[str] = None):
         """
         Initialize the data preparation module.
 
         Args:
-            data_path: Path to the data directory containing CSV files
+            data_path: Path to the data directory containing CSV files (defaults to config.DATA_DIR)
         """
-        self.data_path = Path(data_path)
+        self.data_path = Path(data_path) if data_path else Path(config.DATA_DIR)
         self.cryptocurrencies = ['btc', 'eth', 'xrp', 'bnb', 'ltc', 'ada']
         # Ensure analysis window is UTC timezone-aware
         self.start_date = pd.Timestamp('2019-01-01', tz='UTC')
@@ -527,13 +528,13 @@ class DataPreparation:
 
 
 # Utility functions for standalone use
-def load_and_prepare_single_crypto(crypto: str, data_path: str = "../data") -> pd.DataFrame:
+def load_and_prepare_single_crypto(crypto: str, data_path: Optional[str] = None) -> pd.DataFrame:
     """
     Convenience function to load and prepare data for a single cryptocurrency.
 
     Args:
         crypto: Cryptocurrency symbol
-        data_path: Path to data directory
+        data_path: Path to data directory (defaults to config.DATA_DIR)
 
     Returns:
         Prepared DataFrame
@@ -542,12 +543,12 @@ def load_and_prepare_single_crypto(crypto: str, data_path: str = "../data") -> p
     return prep.prepare_crypto_data(crypto)
 
 
-def load_and_prepare_all_cryptos(data_path: str = "../data") -> Dict[str, pd.DataFrame]:
+def load_and_prepare_all_cryptos(data_path: Optional[str] = None) -> Dict[str, pd.DataFrame]:
     """
     Convenience function to load and prepare data for all cryptocurrencies.
 
     Args:
-        data_path: Path to data directory
+        data_path: Path to data directory (defaults to config.DATA_DIR)
 
     Returns:
         Dictionary of prepared DataFrames

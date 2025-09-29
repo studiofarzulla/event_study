@@ -107,7 +107,7 @@ class EnhancedGARCHModels:
             
             # Display key event effects
             for event, coef in manual_results.event_effects.items():
-                vol_impact = (np.exp(coef) - 1) * 100 if abs(coef) < 1 else coef * 100
+                vol_impact = coef * 100  # Linear variance effect
                 p_val = manual_results.pvalues.get(event, np.nan)
                 sig_stars = "***" if p_val < 0.01 else "**" if p_val < 0.05 else "*" if p_val < 0.10 else ""
                 print(f"    {event}: {coef:+.4f}{sig_stars} ({vol_impact:+.1f}% volatility)")
@@ -184,7 +184,7 @@ def run_enhanced_analysis_example():
     print("=" * 60)
     
     # Step 1: Load data using your existing preparation
-    data_prep = DataPreparation(data_path="../data")
+    data_prep = DataPreparation()  # Will use config.DATA_DIR by default
     
     # Test with Bitcoin
     btc_data = data_prep.prepare_crypto_data(
@@ -228,7 +228,7 @@ def run_enhanced_analysis_example():
         if hasattr(tarchx_results, 'event_effects') and tarchx_results.event_effects:
             for event, coef in tarchx_results.event_effects.items():
                 p_val = tarchx_results.pvalues.get(event, np.nan)
-                vol_change = (np.exp(coef) - 1) * 100 if abs(coef) < 1 else coef * 100
+                vol_change = coef * 100  # Linear variance effect
                 stars = "***" if p_val < 0.01 else "**" if p_val < 0.05 else "*" if p_val < 0.10 else ""
                 print(f"  {event:<20}: {coef:+8.4f}{stars} ({vol_change:+6.1f}% volatility)")
         

@@ -1,6 +1,6 @@
 """
 Robustness checks for cryptocurrency event study.
-Implements OHLC volatility, placebo tests, and winsorization robustness.
+Implements OHLC volatility, placebo tests, winsorization robustness, and event window sensitivity.
 """
 
 import pandas as pd
@@ -11,6 +11,9 @@ from datetime import datetime, timedelta
 import random
 from pathlib import Path
 import sys
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy import stats
 
 sys.path.append(str(Path(__file__).parent))
 
@@ -21,10 +24,14 @@ from event_impact_analysis import EventImpactAnalysis
 
 class RobustnessChecks:
     """
-    Implements three robustness checks for the event study.
+    Implements four robustness checks for the event study:
+    1. OHLC volatility comparison
+    2. Placebo test with random events
+    3. Winsorization robustness
+    4. Event window sensitivity analysis
     """
 
-    def __init__(self, data_path: str = "../data"):
+    def __init__(self, data_path: str = None):
         """
         Initialize robustness checks.
 
@@ -359,10 +366,287 @@ class RobustnessChecks:
 
         return results
 
+    def check_event_window_sensitivity(self, windows: List[int] = None) -> Dict:
+        """
+        Robustness Check 4: Compare event study results across different window sizes.
+        Tests sensitivity of results to the choice of event window length.
+
+        Args:
+            windows: List of half-window sizes to test (e.g., [2, 3, 5] for [-2,+2], [-3,+3], [-5,+5])
+
+        Returns:
+            Dictionary with window comparison results and visualizations
+        """
+        print("\n" + "=" * 60)
+        print("ROBUSTNESS CHECK 4: EVENT WINDOW SENSITIVITY")
+        print("=" * 60)
+
+        if windows is None:
+            windows = [2, 3, 5]  # Default: main [-2,+2], medium [-3,+3], robust [-5,+5]
+
+        results = {}
+
+        # Load sentiment data for event study
+        gdelt_path = self.data_path / 'gdelt.csv'
+        if not gdelt_path.exists():
+            print("ERROR: gdelt.csv not found for event study analysis")
+            return results
+
+        gdelt_data = pd.read_csv(gdelt_path)
+        gdelt_data['week_start'] = pd.to_datetime(gdelt_data['week_start'])
+        gdelt_data = gdelt_data.sort_values('week_start').reset_index(drop=True)
+
+        # Define event thresholds using 75th percentile
+        reg_threshold = gdelt_data['S_reg_decomposed'].abs().quantile(0.75)
+        infra_threshold = gdelt_data['S_infra_decomposed'].abs().quantile(0.75)
+
+        # Create event indicators
+        gdelt_data['reg_event'] = (gdelt_data['S_reg_decomposed'].abs() > reg_threshold).astype(int)
+        gdelt_data['infra_event'] = (gdelt_data['S_infra_decomposed'].abs() > infra_threshold).astype(int)
+
+        print(f"\nEvent Detection:")
+        print(f"  Regulatory events: {gdelt_data['reg_event'].sum()}")
+        print(f"  Infrastructure events: {gdelt_data['infra_event'].sum()}")
+
+        # Run event study for each window size
+        for event_type in ['regulatory', 'infrastructure']:
+            print(f"\n{event_type.upper()} EVENTS:")
+            print("-" * 40)
+
+            event_col = 'reg_event' if event_type == 'regulatory' else 'infra_event'
+            sentiment_col = 'S_reg_decomposed' if event_type == 'regulatory' else 'S_infra_decomposed'
+
+            window_results = {}
+
+            for window_size in windows:
+                print(f"\nWindow [-{window_size},+{window_size}]:")
+
+                # Get event indices
+                event_indices = gdelt_data[gdelt_data[event_col] == 1].index.tolist()
+
+                if len(event_indices) == 0:
+                    print(f"  No events found")
+                    continue
+
+                # Calculate abnormal returns for each event
+                abnormal_returns = []
+                valid_events = 0
+
+                for event_idx in event_indices:
+                    # Define event window
+                    start_idx = max(0, event_idx - window_size)
+                    end_idx = min(len(gdelt_data), event_idx + window_size + 1)
+
+                    # Skip incomplete windows
+                    if end_idx - start_idx < 2 * window_size + 1:
+                        continue
+
+                    # Get sentiment values in window
+                    ar_series = gdelt_data.iloc[start_idx:end_idx][sentiment_col].values
+
+                    if not np.isnan(ar_series).all():
+                        abnormal_returns.append(ar_series)
+                        valid_events += 1
+
+                if len(abnormal_returns) == 0:
+                    print(f"  No valid event windows")
+                    continue
+
+                # Convert to array and calculate statistics
+                ar_array = np.array(abnormal_returns)
+
+                # Average and Cumulative Average Abnormal Returns
+                aar = np.nanmean(ar_array, axis=0)
+                caar = np.nancumsum(aar)
+
+                # Statistical tests
+                t_stats = []
+                p_values = []
+
+                for day in range(len(aar)):
+                    day_returns = ar_array[:, day]
+                    day_returns = day_returns[~np.isnan(day_returns)]
+
+                    if len(day_returns) > 1:
+                        t_stat, p_val = stats.ttest_1samp(day_returns, 0)
+                        t_stats.append(t_stat)
+                        p_values.append(p_val)
+                    else:
+                        t_stats.append(np.nan)
+                        p_values.append(np.nan)
+
+                # Store results
+                days = list(range(-window_size, window_size + 1))
+                window_df = pd.DataFrame({
+                    'Day': days,
+                    'AAR': aar,
+                    'CAAR': caar,
+                    'T_Stat': t_stats,
+                    'P_Value': p_values,
+                    'Significant': [p < 0.05 if not np.isnan(p) else False for p in p_values]
+                })
+
+                window_results[window_size] = {
+                    'results_df': window_df,
+                    'n_events': valid_events,
+                    'abnormal_returns': ar_array
+                }
+
+                # Print summary
+                print(f"  Valid events: {valid_events}")
+                print(f"  Significant days (p<0.05): {sum(window_df['Significant'])}")
+
+                # Event day statistics
+                event_day = window_df[window_df['Day'] == 0]
+                if len(event_day) > 0:
+                    ed = event_day.iloc[0]
+                    print(f"  Event day (t=0): AAR={ed['AAR']:.4f}, t={ed['T_Stat']:.2f}, p={ed['P_Value']:.4f}")
+                print(f"  Final CAAR: {caar[-1]:.4f}")
+
+            results[event_type] = window_results
+
+        # Calculate consistency metrics
+        print("\n" + "=" * 60)
+        print("WINDOW CONSISTENCY ANALYSIS")
+        print("=" * 60)
+
+        for event_type in ['regulatory', 'infrastructure']:
+            if event_type not in results or len(results[event_type]) < 2:
+                continue
+
+            print(f"\n{event_type.upper()} Events:")
+
+            window_sizes = sorted(results[event_type].keys())
+            if len(window_sizes) >= 2:
+                # Compare main window with others
+                main_window = min(window_sizes)
+                main_results = results[event_type][main_window]['results_df']
+
+                for alt_window in window_sizes[1:]:
+                    alt_results = results[event_type][alt_window]['results_df']
+
+                    # Compare overlapping days only
+                    overlap_days = set(range(-main_window, main_window + 1))
+
+                    main_sig = set(main_results[main_results['Significant']]['Day'].tolist())
+                    alt_sig_full = set(alt_results[alt_results['Significant']]['Day'].tolist())
+                    alt_sig = alt_sig_full.intersection(overlap_days)
+
+                    # Calculate consistency
+                    if len(main_sig.union(alt_sig)) > 0:
+                        consistency = len(main_sig.intersection(alt_sig)) / len(main_sig.union(alt_sig))
+                    else:
+                        consistency = 1.0
+
+                    print(f"  Window [-{main_window},+{main_window}] vs [-{alt_window},+{alt_window}]:")
+                    print(f"    Consistency: {consistency:.1%}")
+                    print(f"    Significant days overlap: {sorted(list(main_sig.intersection(alt_sig)))}")
+
+        return results
+
+    def visualize_window_sensitivity(self, results: Dict = None, save_path: str = "../outputs/figures/") -> None:
+        """
+        Create visualization comparing event study results across windows.
+
+        Args:
+            results: Results from check_event_window_sensitivity
+            save_path: Path to save figures
+        """
+        if results is None:
+            results = self.check_event_window_sensitivity()
+
+        # Set style for publication quality
+        plt.style.use('seaborn-v0_8-whitegrid')
+        sns.set_context("paper", font_scale=1.2)
+
+        # Create figure with subplots
+        fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+        fig.suptitle('Event Window Sensitivity Analysis', fontsize=14, fontweight='bold', y=1.02)
+
+        # Define professional colors
+        colors = ['#1f77b4', '#ff7f0e', '#2ca02c']  # Blue, Orange, Green
+        markers = ['o', 's', '^']
+
+        plot_idx = 0
+        for event_type in ['regulatory', 'infrastructure']:
+            if event_type not in results:
+                continue
+
+            window_results = results[event_type]
+
+            # AAR plot
+            ax_aar = axes[plot_idx, 0]
+            # CAAR plot
+            ax_caar = axes[plot_idx, 1]
+
+            for i, (window_size, data) in enumerate(sorted(window_results.items())):
+                df = data['results_df']
+                n_events = data['n_events']
+
+                # Plot AAR with significance markers
+                significant = df['Significant'].values
+                days = df['Day'].values
+                aar = df['AAR'].values
+
+                # Plot all points
+                ax_aar.plot(days, aar, color=colors[i % len(colors)],
+                           marker=markers[i % len(markers)], markersize=4,
+                           label=f'[{-window_size},+{window_size}] (n={n_events})',
+                           linewidth=1.5, alpha=0.8)
+
+                # Highlight significant points
+                sig_days = days[significant]
+                sig_aar = aar[significant]
+                ax_aar.scatter(sig_days, sig_aar, color=colors[i % len(colors)],
+                             s=80, marker='*', edgecolors='black', linewidths=0.5,
+                             zorder=5)
+
+                # Plot CAAR
+                ax_caar.plot(days, df['CAAR'].values, color=colors[i % len(colors)],
+                           marker=markers[i % len(markers)], markersize=4,
+                           label=f'[{-window_size},+{window_size}] (n={n_events})',
+                           linewidth=1.5, alpha=0.8)
+
+            # Format AAR plot
+            ax_aar.set_title(f'{event_type.capitalize()} Events: Average Abnormal Returns',
+                           fontsize=12, fontweight='bold')
+            ax_aar.set_xlabel('Event Day', fontsize=11)
+            ax_aar.set_ylabel('AAR', fontsize=11)
+            ax_aar.axhline(y=0, color='black', linestyle='-', linewidth=0.5, alpha=0.5)
+            ax_aar.axvline(x=0, color='red', linestyle='--', linewidth=0.5, alpha=0.5)
+            ax_aar.legend(fontsize=9, framealpha=0.9)
+            ax_aar.grid(True, alpha=0.3, linestyle='--')
+
+            # Format CAAR plot
+            ax_caar.set_title(f'{event_type.capitalize()} Events: Cumulative Average Abnormal Returns',
+                            fontsize=12, fontweight='bold')
+            ax_caar.set_xlabel('Event Day', fontsize=11)
+            ax_caar.set_ylabel('CAAR', fontsize=11)
+            ax_caar.axhline(y=0, color='black', linestyle='-', linewidth=0.5, alpha=0.5)
+            ax_caar.axvline(x=0, color='red', linestyle='--', linewidth=0.5, alpha=0.5)
+            ax_caar.legend(fontsize=9, framealpha=0.9)
+            ax_caar.grid(True, alpha=0.3, linestyle='--')
+
+            plot_idx += 1
+
+        plt.tight_layout()
+
+        # Save figure
+        save_dir = Path(save_path)
+        save_dir.mkdir(parents=True, exist_ok=True)
+        save_file = save_dir / "event_window_sensitivity.png"
+        plt.savefig(save_file, dpi=300, bbox_inches='tight')
+        print(f"\nVisualization saved: {save_file}")
+
+        plt.show()
+
+        return fig
+
     def run_all_robustness_checks(self, cryptos: List[str] = None,
                                  run_ohlc: bool = True,
                                  run_placebo: bool = True,
-                                 run_winsorization: bool = True) -> Dict:
+                                 run_winsorization: bool = True,
+                                 run_event_window: bool = True) -> Dict:
         """
         Run all robustness checks.
 
@@ -371,6 +655,7 @@ class RobustnessChecks:
             run_ohlc: Whether to run OHLC volatility check
             run_placebo: Whether to run placebo test
             run_winsorization: Whether to run winsorization check
+            run_event_window: Whether to run event window sensitivity check
 
         Returns:
             Dictionary with all robustness check results
@@ -389,6 +674,12 @@ class RobustnessChecks:
 
         if run_winsorization:
             all_results['winsorization'] = self.check_winsorization_robustness(cryptos)
+
+        if run_event_window:
+            all_results['event_window'] = self.check_event_window_sensitivity()
+            # Also create visualization
+            if all_results['event_window']:
+                self.visualize_window_sensitivity(all_results['event_window'])
 
         # Summary
         print("\n" + "=" * 60)
@@ -413,6 +704,21 @@ class RobustnessChecks:
                 if 'aic_improvement' in res:
                     better = 'Winsorized' if res['aic_improvement'] < 0 else 'Raw'
                     print(f"   {crypto.upper()}: Better model = {better}")
+
+        if 'event_window' in all_results:
+            print("\n4. Event Window Sensitivity:")
+            for event_type, windows in all_results['event_window'].items():
+                if isinstance(windows, dict):
+                    window_sizes = list(windows.keys())
+                    if window_sizes:
+                        print(f"   {event_type.capitalize()} events tested with windows: {window_sizes}")
+                        # Check consistency between main and largest window
+                        if len(window_sizes) >= 2:
+                            main_window = min(window_sizes)
+                            robust_window = max(window_sizes)
+                            main_n = windows[main_window]['n_events']
+                            robust_n = windows[robust_window]['n_events']
+                            print(f"     Events analyzed: [{-main_window},+{main_window}]={main_n}, [{-robust_window},+{robust_window}]={robust_n}")
 
         return all_results
 
@@ -442,7 +748,7 @@ def run_robustness_checks(cryptos: Optional[List[str]] = None,
         print("=" * 60)
 
         # Load BTC data for bootstrap example
-        data_prep = DataPreparation(data_path="../data")
+        data_prep = DataPreparation()  # Will use config.DATA_DIR by default
         btc_data = data_prep.prepare_crypto_data('btc', include_events=False, include_sentiment=False)
         returns = btc_data['returns_winsorized'].dropna()
 

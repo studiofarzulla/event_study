@@ -756,13 +756,13 @@ class EventImpactAnalysis:
                     'persistence': infra_persistence,
                     'half_life': calc_half_life(infra_persistence),
                     'coefficient': infra_coef,
-                    'volatility_increase': (np.exp(infra_coef) - 1) * 100 if infra_coef else 0
+                    'volatility_increase': infra_coef * 100 if infra_coef else 0  # Linear variance effect
                 },
                 'regulatory': {
                     'persistence': reg_persistence,
                     'half_life': calc_half_life(reg_persistence),
                     'coefficient': reg_coef,
-                    'volatility_increase': (np.exp(reg_coef) - 1) * 100 if reg_coef else 0
+                    'volatility_increase': reg_coef * 100 if reg_coef else 0  # Linear variance effect
                 }
             }
 

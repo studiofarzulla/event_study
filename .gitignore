@@ -1,10 +1,12 @@
 # Environment variables
 .env
 .env.local
+.env.*.local
 
 # API keys and secrets
 *.key
 config/secrets.json
+secrets/
 
 # Python
 __pycache__/
@@ -12,24 +14,94 @@ __pycache__/
 *$py.class
 *.so
 .Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
 env/
 venv/
 ENV/
+env.bak/
+venv.bak/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+*.code-workspace
 
 # Logs
 *.log
+logs/
 coingecko_fetcher.log
 
-# Data files (if sensitive)
-event_data/
-*.csv
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
+# Data files (be selective)
+# Uncomment if you want to exclude large data files
+# data/*.csv
+# !data/events.csv  # But keep the events file
+# !data/gdelt.csv   # And sentiment data
 
-# OS
+# Output files (keep directory structure)
+outputs/analysis_results/*
+outputs/test/*
+!outputs/.gitkeep
+!outputs/figures/.gitkeep
+!outputs/tables/.gitkeep
+!outputs/publication/.gitkeep
+
+# OS files
 .DS_Store
 Thumbs.db
+*~
+.Trash-*
+
+# Editor backups
+*.swp
+*.swo
+*.bak
+
+# Temporary files
+*.tmp
+temp/
+tmp/
+
+# Documentation builds
+docs/_build/
+site/
+
+# Claude-specific
+.claude/
+
+# Mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/

@@ -91,7 +91,7 @@ def main(run_robustness: bool = False,
     print("STEP 1: DATA PREPARATION")
     print("=" * 60)
 
-    data_prep = DataPreparation(data_path="../data")
+    data_prep = DataPreparation()  # Will use config.DATA_DIR by default
 
     # Prepare data for all cryptocurrencies
     all_cryptos = ['btc', 'eth', 'xrp', 'bnb', 'ltc', 'ada']
@@ -324,7 +324,7 @@ if __name__ == "__main__":
     # Set run_bootstrap=True to include bootstrap inference
     # Set generate_publication=True to create LaTeX tables and plots
     results = main(
-        run_robustness=False,  # Set to True to run robustness checks
+        run_robustness=True,   # Enable robustness checks including event window sensitivity
         run_bootstrap=False,   # Set to True to run bootstrap inference
         generate_publication=True  # Set to True to generate publication outputs
     )

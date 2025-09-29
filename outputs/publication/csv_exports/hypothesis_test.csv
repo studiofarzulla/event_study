@@ -1,0 +1,2 @@
+Infrastructure_mean,Infrastructure_std,Infrastructure_n,Regulatory_mean,Regulatory_std,Regulatory_n,t_statistic,t_pvalue,mann_whitney_statistic,mann_whitney_pvalue,cohens_d
+0.41689053322072844,0.4042933596889917,6,0.41544579096074474,0.3327118996003064,6,0.0061699407436789635,0.9951984821666886,16.0,0.6504329004329004,0.0039022131556597324
