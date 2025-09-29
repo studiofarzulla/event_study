@@ -24,8 +24,10 @@ import pandas as pd
 from scipy.optimize import minimize
 from scipy.stats import t as student_t
 from scipy.special import gamma
-from typing import Dict, List, Tuple, Optional, Union
+from typing import Dict, List, Tuple, Optional
+import warnings
 from dataclasses import dataclass
+
 
 @dataclass
 class TARCHXResults:
@@ -77,6 +79,7 @@ Event Effects:
                 summary += f"\n{sent:<20} = {coef:+.6f} ({pval:.4f})"
 
         return summary
+
 
 class TARCHXEstimator:
     """
@@ -462,6 +465,7 @@ class TARCHXEstimator:
 
         return hessian
 
+
 def estimate_tarch_x_manual(
     returns: pd.Series, exog_vars: Optional[pd.DataFrame] = None, method: str = "SLSQP"
 ) -> TARCHXResults:
@@ -478,6 +482,7 @@ def estimate_tarch_x_manual(
     """
     estimator = TARCHXEstimator(returns, exog_vars)
     return estimator.estimate(method=method)
+
 
 # Example usage for testing
 if __name__ == "__main__":

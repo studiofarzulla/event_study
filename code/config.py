@@ -53,6 +53,7 @@ END_DATE = os.getenv("ANALYSIS_END_DATE", "2025-08-31")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 LOG_FILE = os.getenv("LOG_FILE", str(BASE_DIR / "event_study.log"))
 
+
 # Validation settings
 def validate_config():
     """Validate that required configuration is present."""
@@ -65,6 +66,7 @@ def validate_config():
         errors.append(f"Data directory does not exist: {DATA_DIR}")
 
     return errors
+
 
 # Special event configurations
 SPECIAL_EVENTS = {

@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 class CoinGeckoFetcher:
     """Fetches cryptocurrency data from CoinGecko API for event studies."""
 
@@ -176,6 +177,7 @@ class CoinGeckoFetcher:
 
         filename = f"event_{event_date.strftime('%Y%m%d')}.csv"
         df.to_csv(path / filename, index=False)
+
 
 def fetch_daily_ohlc_coingecko(crypto: str, start: str, end: str, api_key: Optional[str] = None) -> pd.DataFrame:
     """

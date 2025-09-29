@@ -7,8 +7,10 @@ import pandas as pd
 import numpy as np
 from typing import Dict, List, Optional
 from datetime import timedelta
+import warnings
 from pathlib import Path
-from . import config
+import config
+
 
 class DataPreparation:
     """
@@ -510,6 +512,7 @@ class DataPreparation:
 
         return validation
 
+
 # Utility functions for standalone use
 def load_and_prepare_single_crypto(crypto: str, data_path: Optional[str] = None) -> pd.DataFrame:
     """
@@ -524,6 +527,7 @@ def load_and_prepare_single_crypto(crypto: str, data_path: Optional[str] = None)
     """
     prep = DataPreparation(data_path)
     return prep.prepare_crypto_data(crypto)
+
 
 def load_and_prepare_all_cryptos(data_path: Optional[str] = None) -> Dict[str, pd.DataFrame]:
     """

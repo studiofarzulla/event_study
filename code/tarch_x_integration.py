@@ -17,6 +17,7 @@ from tarch_x_manual import estimate_tarch_x_manual, TARCHXResults
 from data_preparation import DataPreparation
 from garch_models import ModelResults
 
+
 class EnhancedGARCHModels:
     """
     Enhanced GARCH model estimator with manual TARCH-X implementation.
@@ -173,6 +174,7 @@ class EnhancedGARCHModels:
             residuals=pd.Series(),
         )
 
+
 def run_enhanced_analysis_example():
     """
     Example of how to use the enhanced TARCH-X implementation
@@ -242,6 +244,7 @@ def run_enhanced_analysis_example():
             print(f"  Half-life of shocks: {half_life:.1f} days")
 
     return tarchx_results
+
 
 # Advantages of Manual Implementation for Your Thesis
 """

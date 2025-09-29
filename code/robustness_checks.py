@@ -20,6 +20,7 @@ from data_preparation import DataPreparation
 from garch_models import GARCHModels, estimate_models_for_crypto
 from event_impact_analysis import EventImpactAnalysis
 
+
 class RobustnessChecks:
     """
     Implements four robustness checks for the event study:
@@ -236,7 +237,7 @@ class RobustnessChecks:
                 if hasattr(tarchx, "event_effects") and "D_event_placebo" in tarchx.event_effects:
                     placebo_coef = tarchx.event_effects["D_event_placebo"]
                     placebo_coefficients.append(placebo_coef)
-            except:
+            except Exception as e:
                 # If model fails, record as zero effect
                 placebo_coefficients.append(0)
 
@@ -748,6 +749,7 @@ class RobustnessChecks:
                             )
 
         return all_results
+
 
 def run_robustness_checks(
     cryptos: Optional[List[str]] = None, run_bootstrap: bool = False, n_bootstrap: int = 500

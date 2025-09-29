@@ -27,6 +27,7 @@ plt.rcParams["figure.figsize"] = (8, 6)
 sns.set_style("whitegrid")
 sns.set_palette("husl")
 
+
 class PublicationOutputs:
     """
     Generate publication-ready outputs for the event study.
@@ -540,6 +541,7 @@ Cryptocurrency & $\gamma$ & p-value \\
         self.export_all_to_csv()
 
         print(f"\nAll outputs saved to {self.output_dir}")
+
 
 def generate_publication_outputs(model_results: Dict, analysis_results: Dict, crypto_data: Dict) -> None:
     """

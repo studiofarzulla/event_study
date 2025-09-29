@@ -23,6 +23,7 @@ sys.path.append(str(Path(__file__).parent))
 from data_preparation import DataPreparation
 from tarch_x_manual import estimate_tarch_x_manual
 
+
 @dataclass
 class ModelResults:
     """Container for model estimation results."""
@@ -44,6 +45,7 @@ class ModelResults:
     sentiment_effects: Optional[Dict[str, float]] = None
     event_std_errors: Optional[Dict[str, float]] = None
     event_pvalues: Optional[Dict[str, float]] = None
+
 
 class GARCHModels:
     """
@@ -500,6 +502,7 @@ class GARCHModels:
 
         return pd.DataFrame(effects_data)
 
+
 def estimate_models_for_crypto(crypto: str, data: pd.DataFrame) -> Dict[str, ModelResults]:
     """
     Convenience function to estimate all models for a single cryptocurrency.
@@ -513,6 +516,7 @@ def estimate_models_for_crypto(crypto: str, data: pd.DataFrame) -> Dict[str, Mod
     """
     modeler = GARCHModels(data, crypto)
     return modeler.estimate_all_models()
+
 
 def estimate_models_for_all_cryptos(crypto_data: Dict[str, pd.DataFrame]) -> Dict[str, Dict[str, ModelResults]]:
     """

@@ -7,11 +7,13 @@ import numpy as np
 import pandas as pd
 from arch import arch_model
 from typing import Dict, List
+import warnings
 from tqdm import tqdm
 import sys
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent))
+
 
 class BootstrapInference:
     """
@@ -278,7 +280,7 @@ class BootstrapInference:
                         if col in boot_model.event_effects:
                             bootstrap_coeffs[col].append(boot_model.event_effects[col])
                     convergence_count += 1
-            except:
+            except Exception as e:
                 continue  # Skip failed bootstrap samples
 
         print(f"Bootstrap completed: {convergence_count}/{n_bootstrap} converged")
@@ -330,6 +332,7 @@ class BootstrapInference:
             )
 
         return pd.DataFrame(table_data)
+
 
 def run_bootstrap_analysis(
     returns: pd.Series, model_type: str = "TARCH", n_bootstrap: int = 500, seed: int = 42

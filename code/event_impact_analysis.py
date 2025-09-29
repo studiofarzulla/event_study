@@ -17,6 +17,7 @@ sys.path.append(str(Path(__file__).parent))
 from data_preparation import DataPreparation
 from garch_models import GARCHModels, ModelResults
 
+
 class EventImpactAnalysis:
     """
     Analyzes event impacts from TARCH-X models and tests hypotheses.
@@ -658,7 +659,7 @@ class EventImpactAnalysis:
                             granger_results["infra_causes_vol"] = {
                                 lag: granger_infra[lag][0]["ssr_ftest"][1] for lag in range(1, 5)
                             }
-                        except:
+                        except Exception as e:
                             granger_results["infra_causes_vol"] = None
 
                         try:
@@ -669,7 +670,7 @@ class EventImpactAnalysis:
                             granger_results["reg_causes_vol"] = {
                                 lag: granger_reg[lag][0]["ssr_ftest"][1] for lag in range(1, 5)
                             }
-                        except:
+                        except Exception as e:
                             granger_results["reg_causes_vol"] = None
 
                     crypto_results = {
@@ -972,6 +973,7 @@ class EventImpactAnalysis:
                 "significant": p_value < 0.05,
             }
         return {"error": "Insufficient data for comparison"}
+
 
 def run_complete_analysis(model_results: Dict[str, Dict[str, ModelResults]]) -> Dict:
     """

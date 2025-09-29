@@ -8,6 +8,8 @@ import numpy as np
 import sys
 from pathlib import Path
 import json
+import warnings
+from datetime import datetime
 
 # Add current directory to path
 sys.path.append(str(Path(__file__).parent))
@@ -18,6 +20,7 @@ from event_impact_analysis import run_complete_analysis
 from publication_outputs import generate_publication_outputs
 from robustness_checks import run_robustness_checks
 from bootstrap_inference import run_bootstrap_analysis
+
 
 def save_results_to_csv(results: dict, output_dir: Path):
     """Save analysis results to CSV files for easy viewing."""
@@ -48,6 +51,7 @@ def save_results_to_csv(results: dict, output_dir: Path):
         results["publication_table"].to_csv(output_dir / "publication_table.csv", index=False)
 
     print(f"\nResults saved to {output_dir}")
+
 
 def main(run_robustness: bool = False, run_bootstrap: bool = False, generate_publication: bool = True):
     """
@@ -318,6 +322,7 @@ def main(run_robustness: bool = False, run_bootstrap: bool = False, generate_pub
     print(f"\nCompleted at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     return analysis_results
+
 
 if __name__ == "__main__":
     # Run with default settings

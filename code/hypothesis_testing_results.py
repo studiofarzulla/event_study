@@ -7,12 +7,15 @@ H2: Sentiment acts as a leading indicator with different patterns by event type
 H3: TARCH-X models outperform standard GARCH/TARCH models
 """
 
+import warnings
+
 warnings.filterwarnings("ignore")
 
 import pandas as pd
 import numpy as np
 from pathlib import Path
 import sys
+from datetime import datetime
 from typing import Dict, List, Tuple
 
 # Add code directory to path
@@ -23,6 +26,7 @@ from garch_models import GARCHModels
 from event_impact_analysis import EventImpactAnalysis
 from bootstrap_inference import BootstrapInference
 from robustness_checks import RobustnessChecks
+
 
 class HypothesisTestingResults:
     """
@@ -419,6 +423,7 @@ class HypothesisTestingResults:
             "h3_results": h3_results,
             "ftx_verification": ftx_verification,
         }
+
 
 if __name__ == "__main__":
     # Run the complete hypothesis testing
