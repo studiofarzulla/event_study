@@ -7,13 +7,13 @@ import pandas as pd
 import numpy as np
 from arch import arch_model
 from arch.univariate import GARCH, EGARCH, ConstantMean, StudentsT, Normal
+
 try:
     from arch.univariate import GJRGARCH as GJR
 except ImportError:
     # Some versions might not have GJR directly
     GJR = None
 from typing import Dict, List, Optional, Tuple, Any
-import warnings
 from dataclasses import dataclass
 import sys
 from pathlib import Path
@@ -27,6 +27,7 @@ from tarch_x_manual import estimate_tarch_x_manual
 @dataclass
 class ModelResults:
     """Container for model estimation results."""
+
     model_type: str
     crypto: str
     aic: float
@@ -62,24 +63,21 @@ class GARCHModels:
         """
         self.data = data.copy()
         self.crypto = crypto
-        self.returns = data['returns_winsorized'].dropna()
+        self.returns = data["returns_winsorized"].dropna()
 
         # Store exogenous variables if present
-        self.has_events = any(col.startswith('D_') for col in data.columns)
-        self.has_sentiment = any('gdelt' in col or 'reg_decomposed' in col or 'infra_decomposed' in col
-                                for col in data.columns)
+        self.has_events = any(col.startswith("D_") for col in data.columns)
+        self.has_sentiment = any(
+            "gdelt" in col or "reg_decomposed" in col or "infra_decomposed" in col for col in data.columns
+        )
 
         # Model specifications
-        self.mean_model = 'Constant'  # Can be 'Constant', 'Zero', or 'AR'
-        self.vol_models = {
-            'GARCH': GARCH,
-            'TARCH': GJR,  # GJR-GARCH is equivalent to TARCH
-            'EGARCH': EGARCH
-        }
+        self.mean_model = "Constant"  # Can be 'Constant', 'Zero', or 'AR'
+        self.vol_models = {"GARCH": GARCH, "TARCH": GJR, "EGARCH": EGARCH}  # GJR-GARCH is equivalent to TARCH
 
         # Estimation options
-        self.disp = 'off'  # Turn off optimization display
-        self.options = {'maxiter': 1000}
+        self.disp = "off"  # Turn off optimization display
+        self.options = {"maxiter": 1000}
 
         # Results storage
         self.results = {}
@@ -99,25 +97,14 @@ class GARCHModels:
 
         try:
             # Create GARCH(1,1) model with Student's t distribution
-            model = arch_model(
-                self.returns,
-                mean=self.mean_model,
-                vol='GARCH',
-                p=1,
-                q=1,
-                dist='StudentsT'
-            )
+            model = arch_model(self.returns, mean=self.mean_model, vol="GARCH", p=1, q=1, dist="StudentsT")
 
             # Estimate with robust standard errors
-            res = model.fit(
-                disp=self.disp,
-                options=self.options,
-                cov_type='robust'
-            )
+            res = model.fit(disp=self.disp, options=self.options, cov_type="robust")
 
             # Extract results
-            results = self._extract_results(res, 'GARCH(1,1)')
-            self.results['GARCH'] = results
+            results = self._extract_results(res, "GARCH(1,1)")
+            self.results["GARCH"] = results
 
             print(f"  [OK] GARCH(1,1) converged in {results.iterations} iterations")
             print(f"  AIC: {results.aic:.2f}, BIC: {results.bic:.2f}")
@@ -126,7 +113,7 @@ class GARCHModels:
 
         except Exception as e:
             print(f"  [FAIL] GARCH(1,1) estimation failed: {str(e)}")
-            return self._create_failed_result('GARCH(1,1)')
+            return self._create_failed_result("GARCH(1,1)")
 
     def estimate_tarch_11(self) -> ModelResults:
         """
@@ -143,28 +130,24 @@ class GARCHModels:
             model = arch_model(
                 self.returns,
                 mean=self.mean_model,
-                vol='GARCH',
+                vol="GARCH",
                 p=1,
                 o=1,  # This makes it GJR/TARCH
                 q=1,
-                dist='StudentsT'
+                dist="StudentsT",
             )
 
             # Estimate with robust standard errors
-            res = model.fit(
-                disp=self.disp,
-                options=self.options,
-                cov_type='robust'
-            )
+            res = model.fit(disp=self.disp, options=self.options, cov_type="robust")
 
             # Extract results
-            results = self._extract_results(res, 'TARCH(1,1)')
+            results = self._extract_results(res, "TARCH(1,1)")
 
             # Extract leverage effect (gamma parameter)
-            if 'gamma[1]' in res.params:
-                results.leverage_effect = res.params['gamma[1]']
+            if "gamma[1]" in res.params:
+                results.leverage_effect = res.params["gamma[1]"]
 
-            self.results['TARCH'] = results
+            self.results["TARCH"] = results
 
             print(f"  [OK] TARCH(1,1) converged in {results.iterations} iterations")
             print(f"  AIC: {results.aic:.2f}, BIC: {results.bic:.2f}")
@@ -175,25 +158,17 @@ class GARCHModels:
 
         except Exception as e:
             print(f"  [FAIL] TARCH(1,1) estimation failed: {str(e)}")
-            return self._create_failed_result('TARCH(1,1)')
+            return self._create_failed_result("TARCH(1,1)")
 
-
-    
-
-
-    def estimate_tarch_x(self, use_individual_events: bool = True,
-                        include_sentiment: bool = True) -> ModelResults:
+    def estimate_tarch_x(self, use_individual_events: bool = True, include_sentiment: bool = True) -> ModelResults:
         """Estimate TARCH-X model with exogenous variables in the variance equation."""
         print(f"Estimating TARCH-X for {self.crypto}...")
 
-        exog_vars = self._prepare_exogenous_variables(
-            use_individual_events,
-            include_sentiment
-        )
+        exog_vars = self._prepare_exogenous_variables(use_individual_events, include_sentiment)
 
         if exog_vars is None or exog_vars.empty:
             print("  [WARNING] No exogenous variables available for TARCH-X")
-            return self._create_failed_result('TARCH-X')
+            return self._create_failed_result("TARCH-X")
 
         try:
             # Align exogenous variables with returns
@@ -202,19 +177,15 @@ class GARCHModels:
             # Use manual TARCH-X implementation for proper variance equation specification
             print(f"  Using manual TARCH-X implementation with {len(exog_aligned.columns)} exogenous variables")
 
-            manual_results = estimate_tarch_x_manual(
-                returns=self.returns,
-                exog_vars=exog_aligned,
-                method='SLSQP'
-            )
+            manual_results = estimate_tarch_x_manual(returns=self.returns, exog_vars=exog_aligned, method="SLSQP")
 
             if not manual_results.converged:
                 print("  [FAIL] Manual TARCH-X did not converge")
-                return self._create_failed_result('TARCH-X')
+                return self._create_failed_result("TARCH-X")
 
             # Convert manual results to ModelResults format for compatibility
             results = ModelResults(
-                model_type='TARCH-X',
+                model_type="TARCH-X",
                 crypto=self.crypto,
                 aic=manual_results.aic,
                 bic=manual_results.bic,
@@ -229,10 +200,10 @@ class GARCHModels:
                 leverage_effect=manual_results.leverage_effect,
                 event_effects=manual_results.event_effects,
                 sentiment_effects=manual_results.sentiment_effects,
-                event_std_errors={k: manual_results.std_errors.get(k, np.nan)
-                                 for k in manual_results.event_effects.keys()},
-                event_pvalues={k: manual_results.pvalues.get(k, np.nan)
-                              for k in manual_results.event_effects.keys()}
+                event_std_errors={
+                    k: manual_results.std_errors.get(k, np.nan) for k in manual_results.event_effects.keys()
+                },
+                event_pvalues={k: manual_results.pvalues.get(k, np.nan) for k in manual_results.event_effects.keys()},
             )
 
             # Display key results during estimation
@@ -263,11 +234,13 @@ class GARCHModels:
 
             # Display leverage effect
             if manual_results.leverage_effect and not np.isnan(manual_results.leverage_effect):
-                gamma_pval = manual_results.pvalues.get('gamma', np.nan)
-                sig_stars = "***" if gamma_pval < 0.01 else "**" if gamma_pval < 0.05 else "*" if gamma_pval < 0.10 else ""
+                gamma_pval = manual_results.pvalues.get("gamma", np.nan)
+                sig_stars = (
+                    "***" if gamma_pval < 0.01 else "**" if gamma_pval < 0.05 else "*" if gamma_pval < 0.10 else ""
+                )
                 print(f"  Leverage effect (gamma): {manual_results.leverage_effect:.4f}{sig_stars}")
 
-            self.results['TARCH-X'] = results
+            self.results["TARCH-X"] = results
             return results
 
         except Exception as e:
@@ -276,12 +249,9 @@ class GARCHModels:
             if use_individual_events and not self._is_fallback_attempt:
                 print("  -> Attempting fallback with aggregated event type dummies...")
                 self._is_fallback_attempt = True
-                return self.estimate_tarch_x(
-                    use_individual_events=False,
-                    include_sentiment=include_sentiment
-                )
+                return self.estimate_tarch_x(use_individual_events=False, include_sentiment=include_sentiment)
 
-            return self._create_failed_result('TARCH-X')
+            return self._create_failed_result("TARCH-X")
 
     def estimate_all_models(self) -> Dict[str, ModelResults]:
         """
@@ -303,19 +273,16 @@ class GARCHModels:
         tarchx_results = self.estimate_tarch_x(use_individual_events=False)
 
         # Store all results
-        all_results = {
-            'GARCH(1,1)': garch_results,
-            'TARCH(1,1)': tarch_results,
-            'TARCH-X': tarchx_results
-        }
+        all_results = {"GARCH(1,1)": garch_results, "TARCH(1,1)": tarch_results, "TARCH-X": tarchx_results}
 
         # Model comparison
         self._compare_models(all_results)
 
         return all_results
 
-    def _prepare_exogenous_variables(self, use_individual_events: bool,
-                                    include_sentiment: bool) -> Optional[pd.DataFrame]:
+    def _prepare_exogenous_variables(
+        self, use_individual_events: bool, include_sentiment: bool
+    ) -> Optional[pd.DataFrame]:
         """
         Prepare exogenous variables for TARCH-X model.
 
@@ -331,21 +298,22 @@ class GARCHModels:
         # Add event dummies
         if self.has_events:
             if use_individual_events:
-                event_cols = [col for col in self.data.columns if col.startswith('D_')]
+                event_cols = [col for col in self.data.columns if col.startswith("D_")]
                 if event_cols:
                     exog_vars.extend(sorted(event_cols))
             else:
-                if 'D_infrastructure' in self.data.columns:
-                    exog_vars.append('D_infrastructure')
-                if 'D_regulatory' in self.data.columns:
-                    exog_vars.append('D_regulatory')
+                if "D_infrastructure" in self.data.columns:
+                    exog_vars.append("D_infrastructure")
+                if "D_regulatory" in self.data.columns:
+                    exog_vars.append("D_regulatory")
 
         # Add sentiment variables
         if include_sentiment and self.has_sentiment:
-            sentiment_cols = [col for col in self.data.columns
-                            if 'gdelt_normalized' in col or
-                               'reg_decomposed' in col or
-                               'infra_decomposed' in col]
+            sentiment_cols = [
+                col
+                for col in self.data.columns
+                if "gdelt_normalized" in col or "reg_decomposed" in col or "infra_decomposed" in col
+            ]
             exog_vars.extend(sentiment_cols)
 
         if not exog_vars:
@@ -371,34 +339,30 @@ class GARCHModels:
             ModelResults object
         """
         # Safer convergence checking with multiple fallbacks
-        converged = bool(getattr(arch_result, 'converged',
-                               getattr(arch_result, 'convergence_flag', 1) == 0))
+        converged = bool(getattr(arch_result, "converged", getattr(arch_result, "convergence_flag", 1) == 0))
 
         # Safer extraction of standard errors
         std_errors = {}
-        if hasattr(arch_result, 'std_err'):
+        if hasattr(arch_result, "std_err"):
             std_errors = dict(arch_result.std_err)
-        elif hasattr(arch_result, 'bse'):
+        elif hasattr(arch_result, "bse"):
             std_errors = dict(arch_result.bse)
-        elif hasattr(arch_result, 'std_errors'):
+        elif hasattr(arch_result, "std_errors"):
             std_errors = dict(arch_result.std_errors)
 
         return ModelResults(
             model_type=model_type,
             crypto=self.crypto,
-            aic=getattr(arch_result, 'aic', np.nan),
-            bic=getattr(arch_result, 'bic', np.nan),
-            log_likelihood=getattr(arch_result, 'loglikelihood', np.nan),
-            parameters=dict(getattr(arch_result, 'params', {})),
+            aic=getattr(arch_result, "aic", np.nan),
+            bic=getattr(arch_result, "bic", np.nan),
+            log_likelihood=getattr(arch_result, "loglikelihood", np.nan),
+            parameters=dict(getattr(arch_result, "params", {})),
             std_errors=std_errors,
-            pvalues=dict(getattr(arch_result, 'pvalues', {})),
+            pvalues=dict(getattr(arch_result, "pvalues", {})),
             convergence=converged,
-            iterations=getattr(arch_result, 'iterations',
-                             getattr(arch_result, 'num_params', 0)),
-            volatility=getattr(arch_result, 'conditional_volatility',
-                             pd.Series(dtype=float)),
-            residuals=getattr(arch_result, 'resid',
-                            pd.Series(dtype=float))
+            iterations=getattr(arch_result, "iterations", getattr(arch_result, "num_params", 0)),
+            volatility=getattr(arch_result, "conditional_volatility", pd.Series(dtype=float)),
+            residuals=getattr(arch_result, "resid", pd.Series(dtype=float)),
         )
 
     def _create_failed_result(self, model_type: str) -> ModelResults:
@@ -423,7 +387,7 @@ class GARCHModels:
             convergence=False,
             iterations=0,
             volatility=pd.Series(),
-            residuals=pd.Series()
+            residuals=pd.Series(),
         )
 
     def _compare_models(self, results: Dict[str, ModelResults]):
@@ -440,24 +404,26 @@ class GARCHModels:
         comparison_data = []
         for model_name, result in results.items():
             if result.convergence:
-                comparison_data.append({
-                    'Model': model_name,
-                    'AIC': result.aic,
-                    'BIC': result.bic,
-                    'Log-Likelihood': result.log_likelihood,
-                    'Converged': result.convergence
-                })
+                comparison_data.append(
+                    {
+                        "Model": model_name,
+                        "AIC": result.aic,
+                        "BIC": result.bic,
+                        "Log-Likelihood": result.log_likelihood,
+                        "Converged": result.convergence,
+                    }
+                )
 
         if comparison_data:
             comparison_df = pd.DataFrame(comparison_data)
-            comparison_df = comparison_df.sort_values('AIC')
+            comparison_df = comparison_df.sort_values("AIC")
 
             print("\nModel Fit Statistics:")
             print(comparison_df.to_string(index=False))
 
             # Identify best model
-            best_aic = comparison_df.iloc[0]['Model']
-            best_bic = comparison_df.sort_values('BIC').iloc[0]['Model']
+            best_aic = comparison_df.iloc[0]["Model"]
+            best_bic = comparison_df.sort_values("BIC").iloc[0]["Model"]
 
             print(f"\nBest model by AIC: {best_aic}")
             print(f"Best model by BIC: {best_bic}")
@@ -475,7 +441,7 @@ class GARCHModels:
             Dictionary with diagnostic test results
         """
         if not model_result.convergence:
-            return {'error': 'Model did not converge'}
+            return {"error": "Model did not converge"}
 
         from scipy import stats
 
@@ -486,26 +452,19 @@ class GARCHModels:
 
         # Ljung-Box test for autocorrelation
         from statsmodels.stats.diagnostic import acorr_ljungbox
+
         lb_test = acorr_ljungbox(std_residuals.dropna(), lags=10, return_df=True)
-        diagnostics['ljung_box'] = {
-            'statistic': lb_test['lb_stat'].iloc[-1],
-            'pvalue': lb_test['lb_pvalue'].iloc[-1]
-        }
+        diagnostics["ljung_box"] = {"statistic": lb_test["lb_stat"].iloc[-1], "pvalue": lb_test["lb_pvalue"].iloc[-1]}
 
         # ARCH-LM test for remaining heteroskedasticity
         from statsmodels.stats.diagnostic import het_arch
+
         arch_test = het_arch(std_residuals.dropna(), nlags=5)
-        diagnostics['arch_lm'] = {
-            'statistic': arch_test[0],
-            'pvalue': arch_test[1]
-        }
+        diagnostics["arch_lm"] = {"statistic": arch_test[0], "pvalue": arch_test[1]}
 
         # Jarque-Bera test for normality
         jb_test = stats.jarque_bera(std_residuals.dropna())
-        diagnostics['jarque_bera'] = {
-            'statistic': jb_test[0],
-            'pvalue': jb_test[1]
-        }
+        diagnostics["jarque_bera"] = {"statistic": jb_test[0], "pvalue": jb_test[1]}
 
         return diagnostics
 
@@ -516,11 +475,11 @@ class GARCHModels:
         Returns:
             DataFrame with event impacts and significance
         """
-        if 'TARCH-X' not in self.results or not self.results['TARCH-X'].convergence:
+        if "TARCH-X" not in self.results or not self.results["TARCH-X"].convergence:
             print(f"No converged TARCH-X model for {self.crypto}")
             return pd.DataFrame()
 
-        tarchx = self.results['TARCH-X']
+        tarchx = self.results["TARCH-X"]
 
         if not tarchx.event_effects:
             print(f"No event effects found in TARCH-X model for {self.crypto}")
@@ -529,15 +488,17 @@ class GARCHModels:
         # Create DataFrame with event effects
         effects_data = []
         for event_var, coefficient in tarchx.event_effects.items():
-            effects_data.append({
-                'crypto': self.crypto,
-                'event_variable': event_var,
-                'coefficient': coefficient,
-                'std_error': tarchx.std_errors.get(event_var, np.nan),
-                'p_value': tarchx.pvalues.get(event_var, np.nan),
-                'significant_5pct': tarchx.pvalues.get(event_var, 1.0) < 0.05,
-                'significant_10pct': tarchx.pvalues.get(event_var, 1.0) < 0.10
-            })
+            effects_data.append(
+                {
+                    "crypto": self.crypto,
+                    "event_variable": event_var,
+                    "coefficient": coefficient,
+                    "std_error": tarchx.std_errors.get(event_var, np.nan),
+                    "p_value": tarchx.pvalues.get(event_var, np.nan),
+                    "significant_5pct": tarchx.pvalues.get(event_var, 1.0) < 0.05,
+                    "significant_10pct": tarchx.pvalues.get(event_var, 1.0) < 0.10,
+                }
+            )
 
         return pd.DataFrame(effects_data)
 
