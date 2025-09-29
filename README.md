@@ -2,7 +2,7 @@
 
 A comprehensive analysis of differential volatility impacts between Infrastructure and Regulatory events on major cryptocurrencies using GARCH models with sentiment controls.
 
-## 📊 Project Overview
+## Project Overview
 
 This research examines how different types of events affect cryptocurrency market volatility. Using a dataset of 50 classified events (27 Infrastructure, 23 Regulatory) from 2019-2025, we apply advanced econometric models to quantify and compare their impacts on six major cryptocurrencies: Bitcoin (BTC), Ethereum (ETH), Ripple (XRP), Binance Coin (BNB), Litecoin (LTC), and Cardano (ADA).
 
@@ -11,7 +11,7 @@ This research examines how different types of events affect cryptocurrency marke
 - Effects persist across multiple model specifications and robustness checks
 - Sentiment data from GDELT provides additional explanatory power
 
-## 🚀 Features
+## Features
 
 - **Advanced Volatility Modeling**: Implementation of GARCH(1,1), TARCH(1,1), and TARCH-X models
 - **Event Window Analysis**: Automated handling of overlapping and special events
@@ -19,12 +19,12 @@ This research examines how different types of events affect cryptocurrency marke
 - **Robustness Framework**: Bootstrap inference, placebo tests, and sensitivity analysis
 - **Publication-Ready Outputs**: LaTeX tables and high-quality visualizations
 
-## 📋 Prerequisites
+## Prerequisites
 
 - Python 3.8 or higher
 - CoinGecko API key (free tier available at [CoinGecko](https://www.coingecko.com/en/api))
 
-## 🛠️ Installation
+## Installation
 
 ### 1. Clone the repository
 ```bash
@@ -49,7 +49,7 @@ cp .env.example .env
 # Edit .env and add your CoinGecko API key
 ```
 
-## 💻 Usage
+## Usage
 
 ### Quick Start
 Run the complete analysis pipeline:
@@ -98,7 +98,7 @@ crypto_data = data_prep.prepare_all_cryptos(
 model_results = estimate_models_for_all_cryptos(crypto_data)
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 event_study/
@@ -122,13 +122,13 @@ event_study/
 └── docs/                         # Documentation
 ```
 
-## 📊 Data Sources
+## Data Sources
 
 - **Price Data**: CoinGecko API (requires API key)
 - **Event Data**: Manually classified cryptocurrency events (2019-2025)
 - **Sentiment Data**: GDELT Project news sentiment indicators
 
-## 🔬 Methodology
+## Methodology
 
 ### Event Classification
 Events are classified into two categories:
@@ -144,7 +144,7 @@ Events are classified into two categories:
 - Standard: [-3, +3] days around event
 - Special handling for overlapping events (e.g., SEC Twin Suits, EIP-1559 & Poly Hack)
 
-## 🧪 Testing
+## Testing
 
 Run the test suite:
 ```bash
@@ -156,18 +156,18 @@ Run with coverage:
 pytest tests/ --cov=code --cov-report=html
 ```
 
-## 📈 Results
+## Results
 
 Key findings from the analysis:
 - Infrastructure events increase volatility by approximately 2.5% on average
 - Regulatory events show smaller but significant impacts (~1.2%)
 - Effects are consistent across different cryptocurrencies and model specifications
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-## 📝 Citation
+## Citation
 
 If you use this code in your research, please cite:
 
@@ -180,21 +180,21 @@ If you use this code in your research, please cite:
 }
 ```
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see [LICENSE](LICENSE) file for details.
 
-## ⚠️ Disclaimer
+## Disclaimer
 
 This software is for research purposes only. Cryptocurrency markets are highly volatile and risky. This analysis should not be considered as financial advice.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - CoinGecko for providing cryptocurrency data API
 - GDELT Project for sentiment data
 - The cryptocurrency research community for valuable insights
 
-## 📧 Contact
+## Contact
 
 For questions or collaboration opportunities, please open an issue or contact murad@farzulla.org
 

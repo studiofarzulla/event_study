@@ -2,11 +2,11 @@
 
 Thank you for your interest in contributing to this project! This document provides guidelines and instructions for contributing.
 
-## 🤝 Code of Conduct
+## Code of Conduct
 
 By participating in this project, you agree to abide by our principles of respectful and constructive collaboration.
 
-## 🚀 Getting Started
+## Getting Started
 
 1. **Fork the repository** on GitHub
 2. **Clone your fork** locally:
@@ -23,7 +23,7 @@ By participating in this project, you agree to abide by our principles of respec
    git checkout -b feature/your-feature-name
    ```
 
-## 📋 Development Setup
+## Development Setup
 
 1. **Create a virtual environment**:
    ```bash
@@ -48,7 +48,7 @@ By participating in this project, you agree to abide by our principles of respec
    # Add your API keys to .env
    ```
 
-## 🔧 Development Guidelines
+## Development Guidelines
 
 ### Code Style
 
@@ -98,7 +98,7 @@ feat: add support for additional cryptocurrencies
 - Added tests for new functionality
 ```
 
-## 🐛 Reporting Issues
+## Reporting Issues
 
 ### Bug Reports
 
@@ -117,7 +117,7 @@ For feature requests, please describe:
 - Alternative solutions you've considered
 - Any relevant examples or use cases
 
-## 📝 Submitting Pull Requests
+## Submitting Pull Requests
 
 1. **Update your fork**:
    ```bash
@@ -152,13 +152,13 @@ For feature requests, please describe:
    - Summary of changes made
    - Screenshots if applicable
 
-## 🔍 Code Review Process
+## Code Review Process
 
 1. Maintainers will review your PR within 5-7 days
 2. Address any requested changes
 3. Once approved, your PR will be merged
 
-## 📚 Areas for Contribution
+## Areas for Contribution
 
 ### Priority Areas
 - [ ] Additional statistical tests
@@ -171,7 +171,7 @@ For feature requests, please describe:
 ### Good First Issues
 Look for issues labeled `good first issue` for beginner-friendly contributions.
 
-## 💡 Tips for Contributors
+## Tips for Contributors
 
 - Start small with documentation fixes or minor bug fixes
 - Ask questions in issues if you need clarification
@@ -179,14 +179,14 @@ Look for issues labeled `good first issue` for beginner-friendly contributions.
 - Test your changes thoroughly
 - Be patient and respectful in discussions
 
-## 📞 Getting Help
+## Getting Help
 
 - Open an issue for questions
 - Check existing issues and PRs
 - Review the documentation
 - Contact maintainers if needed
 
-## 🏆 Recognition
+## Recognition
 
 Contributors will be acknowledged in:
 - The project README
