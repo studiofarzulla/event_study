@@ -6,7 +6,6 @@ Implements OHLC volatility, placebo tests, winsorization robustness, and event w
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Optional, Tuple
-import warnings
 from datetime import datetime, timedelta
 import random
 from pathlib import Path
@@ -20,7 +19,6 @@ sys.path.append(str(Path(__file__).parent))
 from data_preparation import DataPreparation
 from garch_models import GARCHModels, estimate_models_for_crypto
 from event_impact_analysis import EventImpactAnalysis
-
 
 class RobustnessChecks:
     """
@@ -56,7 +54,7 @@ class RobustnessChecks:
         print("=" * 60)
 
         if cryptos is None:
-            cryptos = ['btc', 'eth']  # Default to main cryptos for speed
+            cryptos = ["btc", "eth"]  # Default to main cryptos for speed
 
         results = {}
 
@@ -74,7 +72,7 @@ class RobustnessChecks:
             gk_volatility = self._calculate_garman_klass(ohlc_data)
 
             # Calculate traditional volatility from returns
-            returns = self.data_prep.calculate_log_returns(ohlc_data['close'])
+            returns = self.data_prep.calculate_log_returns(ohlc_data["close"])
             returns_vol = returns.rolling(window=20).std() * np.sqrt(252)  # Annualized
 
             # Compare volatilities
@@ -85,11 +83,11 @@ class RobustnessChecks:
             # For now, we compare the volatility measures
 
             results[crypto] = {
-                'gk_volatility_mean': gk_volatility.mean(),
-                'returns_volatility_mean': returns_vol.mean(),
-                'correlation': correlation,
-                'gk_vol_std': gk_volatility.std(),
-                'returns_vol_std': returns_vol.std()
+                "gk_volatility_mean": gk_volatility.mean(),
+                "returns_volatility_mean": returns_vol.mean(),
+                "correlation": correlation,
+                "gk_vol_std": gk_volatility.std(),
+                "returns_vol_std": returns_vol.std(),
             }
 
             print(f"  GK Volatility mean: {gk_volatility.mean():.4f}")
@@ -114,12 +112,12 @@ class RobustnessChecks:
             # Fetch real OHLC data from CoinGecko API
             ohlc = fetch_daily_ohlc_coingecko(
                 crypto,
-                start=self.data_prep.start_date.strftime('%Y-%m-%d'),
-                end=self.data_prep.end_date.strftime('%Y-%m-%d')
+                start=self.data_prep.start_date.strftime("%Y-%m-%d"),
+                end=self.data_prep.end_date.strftime("%Y-%m-%d"),
             )
 
             # Return only OHLC columns
-            return ohlc[['open', 'high', 'low', 'close']]
+            return ohlc[["open", "high", "low", "close"]]
 
         except Exception as e:
             print(f"Failed to fetch real OHLC for {crypto}: {e}")
@@ -138,8 +136,8 @@ class RobustnessChecks:
             Series of Garman-Klass volatility estimates
         """
         # Calculate components
-        hl_term = 0.5 * (np.log(ohlc['high'] / ohlc['low'])) ** 2
-        co_term = (2 * np.log(2) - 1) * (np.log(ohlc['close'] / ohlc['open'])) ** 2
+        hl_term = 0.5 * (np.log(ohlc["high"] / ohlc["low"])) ** 2
+        co_term = (2 * np.log(2) - 1) * (np.log(ohlc["close"] / ohlc["open"])) ** 2
 
         # Daily GK volatility
         daily_gk = np.sqrt(hl_term - co_term)
@@ -172,14 +170,14 @@ class RobustnessChecks:
         np.random.seed(seed)
 
         # Load real events to avoid - ensure timezone-aware
-        events_df = pd.read_csv(self.data_path / 'events.csv')
-        events_df['date'] = pd.to_datetime(events_df['date'], utc=True)
-        real_event_dates = events_df['date'].tolist()
+        events_df = pd.read_csv(self.data_path / "events.csv")
+        events_df["date"] = pd.to_datetime(events_df["date"], utc=True)
+        real_event_dates = events_df["date"].tolist()
 
         # Define date range for placebo events - all timezone-aware UTC
-        start_date = pd.Timestamp('2019-01-01', tz='UTC')
-        end_date = pd.Timestamp('2025-08-31', tz='UTC')
-        all_dates = pd.date_range(start=start_date, end=end_date, freq='D', tz='UTC')
+        start_date = pd.Timestamp("2019-01-01", tz="UTC")
+        end_date = pd.Timestamp("2025-08-31", tz="UTC")
+        all_dates = pd.date_range(start=start_date, end=end_date, freq="D", tz="UTC")
 
         # Exclude dates within ±6 days of real events
         excluded_dates = set()
@@ -204,7 +202,7 @@ class RobustnessChecks:
         from garch_models import GARCHModels
 
         data_prep = DataPreparation(data_path=str(self.data_path))
-        btc_data = data_prep.prepare_crypto_data('btc', include_events=False, include_sentiment=False)
+        btc_data = data_prep.prepare_crypto_data("btc", include_events=False, include_sentiment=False)
 
         print(f"Running placebo tests (limited to 20 for speed)...")
         n_tests = min(20, n_placebos)  # Limit for computational speed
@@ -226,17 +224,17 @@ class RobustnessChecks:
 
             # Add placebo dummy to data with proper naming (D_event_ prefix)
             btc_data_with_placebo = btc_data.copy()
-            btc_data_with_placebo['D_event_placebo'] = placebo_dummy
+            btc_data_with_placebo["D_event_placebo"] = placebo_dummy
 
             # Run TARCH-X with placebo - use individual events to ensure inclusion
             try:
-                estimator = GARCHModels(btc_data_with_placebo, 'btc')
+                estimator = GARCHModels(btc_data_with_placebo, "btc")
                 # Call with use_individual_events=True to include D_event_ columns
                 tarchx = estimator.estimate_tarch_x(use_individual_events=True)
 
                 # Extract placebo coefficient
-                if hasattr(tarchx, 'event_effects') and 'D_event_placebo' in tarchx.event_effects:
-                    placebo_coef = tarchx.event_effects['D_event_placebo']
+                if hasattr(tarchx, "event_effects") and "D_event_placebo" in tarchx.event_effects:
+                    placebo_coef = tarchx.event_effects["D_event_placebo"]
                     placebo_coefficients.append(placebo_coef)
             except:
                 # If model fails, record as zero effect
@@ -246,12 +244,12 @@ class RobustnessChecks:
 
         # Get REAL event coefficients from actual analysis
         print("\nGetting real event coefficients...")
-        btc_data_real = data_prep.prepare_crypto_data('btc', include_events=True)
-        estimator_real = GARCHModels(btc_data_real, 'btc')
+        btc_data_real = data_prep.prepare_crypto_data("btc", include_events=True)
+        estimator_real = GARCHModels(btc_data_real, "btc")
         tarchx_real = estimator_real.estimate_tarch_x(use_individual_events=False)
 
-        real_infra_coef = tarchx_real.event_effects.get('D_infrastructure', 0)
-        real_reg_coef = tarchx_real.event_effects.get('D_regulatory', 0)
+        real_infra_coef = tarchx_real.event_effects.get("D_infrastructure", 0)
+        real_reg_coef = tarchx_real.event_effects.get("D_regulatory", 0)
 
         # Calculate percentiles
         placebo_95th = np.percentile(np.abs(placebo_coefficients), 95)
@@ -264,15 +262,15 @@ class RobustnessChecks:
         reg_exceeds_99 = abs(real_reg_coef) > placebo_99th
 
         results = {
-            'n_placebos': len(placebo_coefficients),
-            'placebo_mean': np.mean(placebo_coefficients),
-            'placebo_std': np.std(placebo_coefficients),
-            'placebo_95th_percentile': placebo_95th,
-            'placebo_99th_percentile': placebo_99th,
-            'infrastructure_exceeds_95pct': infra_exceeds_95,
-            'infrastructure_exceeds_99pct': infra_exceeds_99,
-            'regulatory_exceeds_95pct': reg_exceeds_95,
-            'regulatory_exceeds_99pct': reg_exceeds_99
+            "n_placebos": len(placebo_coefficients),
+            "placebo_mean": np.mean(placebo_coefficients),
+            "placebo_std": np.std(placebo_coefficients),
+            "placebo_95th_percentile": placebo_95th,
+            "placebo_99th_percentile": placebo_99th,
+            "infrastructure_exceeds_95pct": infra_exceeds_95,
+            "infrastructure_exceeds_99pct": infra_exceeds_99,
+            "regulatory_exceeds_95pct": reg_exceeds_95,
+            "regulatory_exceeds_99pct": reg_exceeds_99,
         }
 
         print(f"\nPlacebo Test Results:")
@@ -298,7 +296,7 @@ class RobustnessChecks:
         print("=" * 60)
 
         if cryptos is None:
-            cryptos = ['btc', 'eth']
+            cryptos = ["btc", "eth"]
 
         results = {}
 
@@ -306,18 +304,14 @@ class RobustnessChecks:
             print(f"\nAnalyzing {crypto.upper()}...")
 
             # Load data with raw returns
-            data_raw = self.data_prep.prepare_crypto_data(
-                crypto,
-                include_events=False,
-                include_sentiment=False
-            )
+            data_raw = self.data_prep.prepare_crypto_data(crypto, include_events=False, include_sentiment=False)
 
             # Use raw returns (not winsorized)
-            data_raw['returns_original'] = data_raw['returns'].copy()
+            data_raw["returns_original"] = data_raw["returns"].copy()
 
             # Estimate GARCH with raw returns
             print("  Estimating with raw returns...")
-            garch_raw = GARCHModels(data_raw.rename(columns={'returns': 'returns_winsorized'}), crypto)
+            garch_raw = GARCHModels(data_raw.rename(columns={"returns": "returns_winsorized"}), crypto)
             results_raw = garch_raw.estimate_garch_11()
 
             # Estimate GARCH with winsorized returns
@@ -331,27 +325,30 @@ class RobustnessChecks:
 
             if results_raw.convergence and results_wins.convergence:
                 # Compare AIC
-                comparison['aic_raw'] = results_raw.aic
-                comparison['aic_winsorized'] = results_wins.aic
-                comparison['aic_improvement'] = results_wins.aic - results_raw.aic
+                comparison["aic_raw"] = results_raw.aic
+                comparison["aic_winsorized"] = results_wins.aic
+                comparison["aic_improvement"] = results_wins.aic - results_raw.aic
 
                 # Compare degrees of freedom (nu parameter for Student-t)
-                nu_raw = results_raw.parameters.get('nu', np.nan)
-                nu_wins = results_wins.parameters.get('nu', np.nan)
-                comparison['nu_raw'] = nu_raw
-                comparison['nu_winsorized'] = nu_wins
+                nu_raw = results_raw.parameters.get("nu", np.nan)
+                nu_wins = results_wins.parameters.get("nu", np.nan)
+                comparison["nu_raw"] = nu_raw
+                comparison["nu_winsorized"] = nu_wins
 
                 # Check if heavy tails are handled (nu < 10 indicates heavy tails)
-                comparison['heavy_tails_raw'] = nu_raw < 10 if not np.isnan(nu_raw) else False
-                comparison['heavy_tails_winsorized'] = nu_wins < 10 if not np.isnan(nu_wins) else False
+                comparison["heavy_tails_raw"] = nu_raw < 10 if not np.isnan(nu_raw) else False
+                comparison["heavy_tails_winsorized"] = nu_wins < 10 if not np.isnan(nu_wins) else False
 
                 # Parameter stability (compare variance of parameters)
-                comparison['omega_diff'] = abs(results_raw.parameters.get('omega', 0) -
-                                              results_wins.parameters.get('omega', 0))
-                comparison['alpha_diff'] = abs(results_raw.parameters.get('alpha[1]', 0) -
-                                              results_wins.parameters.get('alpha[1]', 0))
-                comparison['beta_diff'] = abs(results_raw.parameters.get('beta[1]', 0) -
-                                             results_wins.parameters.get('beta[1]', 0))
+                comparison["omega_diff"] = abs(
+                    results_raw.parameters.get("omega", 0) - results_wins.parameters.get("omega", 0)
+                )
+                comparison["alpha_diff"] = abs(
+                    results_raw.parameters.get("alpha[1]", 0) - results_wins.parameters.get("alpha[1]", 0)
+                )
+                comparison["beta_diff"] = abs(
+                    results_raw.parameters.get("beta[1]", 0) - results_wins.parameters.get("beta[1]", 0)
+                )
 
                 print(f"  AIC (raw): {comparison['aic_raw']:.2f}")
                 print(f"  AIC (winsorized): {comparison['aic_winsorized']:.2f}")
@@ -360,7 +357,7 @@ class RobustnessChecks:
                 print(f"  Better model: {'Winsorized' if comparison['aic_improvement'] < 0 else 'Raw'}")
 
             else:
-                comparison['error'] = 'One or both models failed to converge'
+                comparison["error"] = "One or both models failed to converge"
 
             results[crypto] = comparison
 
@@ -387,34 +384,34 @@ class RobustnessChecks:
         results = {}
 
         # Load sentiment data for event study
-        gdelt_path = self.data_path / 'gdelt.csv'
+        gdelt_path = self.data_path / "gdelt.csv"
         if not gdelt_path.exists():
             print("ERROR: gdelt.csv not found for event study analysis")
             return results
 
         gdelt_data = pd.read_csv(gdelt_path)
-        gdelt_data['week_start'] = pd.to_datetime(gdelt_data['week_start'])
-        gdelt_data = gdelt_data.sort_values('week_start').reset_index(drop=True)
+        gdelt_data["week_start"] = pd.to_datetime(gdelt_data["week_start"])
+        gdelt_data = gdelt_data.sort_values("week_start").reset_index(drop=True)
 
         # Define event thresholds using 75th percentile
-        reg_threshold = gdelt_data['S_reg_decomposed'].abs().quantile(0.75)
-        infra_threshold = gdelt_data['S_infra_decomposed'].abs().quantile(0.75)
+        reg_threshold = gdelt_data["S_reg_decomposed"].abs().quantile(0.75)
+        infra_threshold = gdelt_data["S_infra_decomposed"].abs().quantile(0.75)
 
         # Create event indicators
-        gdelt_data['reg_event'] = (gdelt_data['S_reg_decomposed'].abs() > reg_threshold).astype(int)
-        gdelt_data['infra_event'] = (gdelt_data['S_infra_decomposed'].abs() > infra_threshold).astype(int)
+        gdelt_data["reg_event"] = (gdelt_data["S_reg_decomposed"].abs() > reg_threshold).astype(int)
+        gdelt_data["infra_event"] = (gdelt_data["S_infra_decomposed"].abs() > infra_threshold).astype(int)
 
         print(f"\nEvent Detection:")
         print(f"  Regulatory events: {gdelt_data['reg_event'].sum()}")
         print(f"  Infrastructure events: {gdelt_data['infra_event'].sum()}")
 
         # Run event study for each window size
-        for event_type in ['regulatory', 'infrastructure']:
+        for event_type in ["regulatory", "infrastructure"]:
             print(f"\n{event_type.upper()} EVENTS:")
             print("-" * 40)
 
-            event_col = 'reg_event' if event_type == 'regulatory' else 'infra_event'
-            sentiment_col = 'S_reg_decomposed' if event_type == 'regulatory' else 'S_infra_decomposed'
+            event_col = "reg_event" if event_type == "regulatory" else "infra_event"
+            sentiment_col = "S_reg_decomposed" if event_type == "regulatory" else "S_infra_decomposed"
 
             window_results = {}
 
@@ -477,19 +474,21 @@ class RobustnessChecks:
 
                 # Store results
                 days = list(range(-window_size, window_size + 1))
-                window_df = pd.DataFrame({
-                    'Day': days,
-                    'AAR': aar,
-                    'CAAR': caar,
-                    'T_Stat': t_stats,
-                    'P_Value': p_values,
-                    'Significant': [p < 0.05 if not np.isnan(p) else False for p in p_values]
-                })
+                window_df = pd.DataFrame(
+                    {
+                        "Day": days,
+                        "AAR": aar,
+                        "CAAR": caar,
+                        "T_Stat": t_stats,
+                        "P_Value": p_values,
+                        "Significant": [p < 0.05 if not np.isnan(p) else False for p in p_values],
+                    }
+                )
 
                 window_results[window_size] = {
-                    'results_df': window_df,
-                    'n_events': valid_events,
-                    'abnormal_returns': ar_array
+                    "results_df": window_df,
+                    "n_events": valid_events,
+                    "abnormal_returns": ar_array,
                 }
 
                 # Print summary
@@ -497,7 +496,7 @@ class RobustnessChecks:
                 print(f"  Significant days (p<0.05): {sum(window_df['Significant'])}")
 
                 # Event day statistics
-                event_day = window_df[window_df['Day'] == 0]
+                event_day = window_df[window_df["Day"] == 0]
                 if len(event_day) > 0:
                     ed = event_day.iloc[0]
                     print(f"  Event day (t=0): AAR={ed['AAR']:.4f}, t={ed['T_Stat']:.2f}, p={ed['P_Value']:.4f}")
@@ -510,7 +509,7 @@ class RobustnessChecks:
         print("WINDOW CONSISTENCY ANALYSIS")
         print("=" * 60)
 
-        for event_type in ['regulatory', 'infrastructure']:
+        for event_type in ["regulatory", "infrastructure"]:
             if event_type not in results or len(results[event_type]) < 2:
                 continue
 
@@ -520,16 +519,16 @@ class RobustnessChecks:
             if len(window_sizes) >= 2:
                 # Compare main window with others
                 main_window = min(window_sizes)
-                main_results = results[event_type][main_window]['results_df']
+                main_results = results[event_type][main_window]["results_df"]
 
                 for alt_window in window_sizes[1:]:
-                    alt_results = results[event_type][alt_window]['results_df']
+                    alt_results = results[event_type][alt_window]["results_df"]
 
                     # Compare overlapping days only
                     overlap_days = set(range(-main_window, main_window + 1))
 
-                    main_sig = set(main_results[main_results['Significant']]['Day'].tolist())
-                    alt_sig_full = set(alt_results[alt_results['Significant']]['Day'].tolist())
+                    main_sig = set(main_results[main_results["Significant"]]["Day"].tolist())
+                    alt_sig_full = set(alt_results[alt_results["Significant"]]["Day"].tolist())
                     alt_sig = alt_sig_full.intersection(overlap_days)
 
                     # Calculate consistency
@@ -556,19 +555,19 @@ class RobustnessChecks:
             results = self.check_event_window_sensitivity()
 
         # Set style for publication quality
-        plt.style.use('seaborn-v0_8-whitegrid')
+        plt.style.use("seaborn-v0_8-whitegrid")
         sns.set_context("paper", font_scale=1.2)
 
         # Create figure with subplots
         fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-        fig.suptitle('Event Window Sensitivity Analysis', fontsize=14, fontweight='bold', y=1.02)
+        fig.suptitle("Event Window Sensitivity Analysis", fontsize=14, fontweight="bold", y=1.02)
 
         # Define professional colors
-        colors = ['#1f77b4', '#ff7f0e', '#2ca02c']  # Blue, Orange, Green
-        markers = ['o', 's', '^']
+        colors = ["#1f77b4", "#ff7f0e", "#2ca02c"]  # Blue, Orange, Green
+        markers = ["o", "s", "^"]
 
         plot_idx = 0
-        for event_type in ['regulatory', 'infrastructure']:
+        for event_type in ["regulatory", "infrastructure"]:
             if event_type not in results:
                 continue
 
@@ -580,52 +579,73 @@ class RobustnessChecks:
             ax_caar = axes[plot_idx, 1]
 
             for i, (window_size, data) in enumerate(sorted(window_results.items())):
-                df = data['results_df']
-                n_events = data['n_events']
+                df = data["results_df"]
+                n_events = data["n_events"]
 
                 # Plot AAR with significance markers
-                significant = df['Significant'].values
-                days = df['Day'].values
-                aar = df['AAR'].values
+                significant = df["Significant"].values
+                days = df["Day"].values
+                aar = df["AAR"].values
 
                 # Plot all points
-                ax_aar.plot(days, aar, color=colors[i % len(colors)],
-                           marker=markers[i % len(markers)], markersize=4,
-                           label=f'[{-window_size},+{window_size}] (n={n_events})',
-                           linewidth=1.5, alpha=0.8)
+                ax_aar.plot(
+                    days,
+                    aar,
+                    color=colors[i % len(colors)],
+                    marker=markers[i % len(markers)],
+                    markersize=4,
+                    label=f"[{-window_size},+{window_size}] (n={n_events})",
+                    linewidth=1.5,
+                    alpha=0.8,
+                )
 
                 # Highlight significant points
                 sig_days = days[significant]
                 sig_aar = aar[significant]
-                ax_aar.scatter(sig_days, sig_aar, color=colors[i % len(colors)],
-                             s=80, marker='*', edgecolors='black', linewidths=0.5,
-                             zorder=5)
+                ax_aar.scatter(
+                    sig_days,
+                    sig_aar,
+                    color=colors[i % len(colors)],
+                    s=80,
+                    marker="*",
+                    edgecolors="black",
+                    linewidths=0.5,
+                    zorder=5,
+                )
 
                 # Plot CAAR
-                ax_caar.plot(days, df['CAAR'].values, color=colors[i % len(colors)],
-                           marker=markers[i % len(markers)], markersize=4,
-                           label=f'[{-window_size},+{window_size}] (n={n_events})',
-                           linewidth=1.5, alpha=0.8)
+                ax_caar.plot(
+                    days,
+                    df["CAAR"].values,
+                    color=colors[i % len(colors)],
+                    marker=markers[i % len(markers)],
+                    markersize=4,
+                    label=f"[{-window_size},+{window_size}] (n={n_events})",
+                    linewidth=1.5,
+                    alpha=0.8,
+                )
 
             # Format AAR plot
-            ax_aar.set_title(f'{event_type.capitalize()} Events: Average Abnormal Returns',
-                           fontsize=12, fontweight='bold')
-            ax_aar.set_xlabel('Event Day', fontsize=11)
-            ax_aar.set_ylabel('AAR', fontsize=11)
-            ax_aar.axhline(y=0, color='black', linestyle='-', linewidth=0.5, alpha=0.5)
-            ax_aar.axvline(x=0, color='red', linestyle='--', linewidth=0.5, alpha=0.5)
+            ax_aar.set_title(
+                f"{event_type.capitalize()} Events: Average Abnormal Returns", fontsize=12, fontweight="bold"
+            )
+            ax_aar.set_xlabel("Event Day", fontsize=11)
+            ax_aar.set_ylabel("AAR", fontsize=11)
+            ax_aar.axhline(y=0, color="black", linestyle="-", linewidth=0.5, alpha=0.5)
+            ax_aar.axvline(x=0, color="red", linestyle="--", linewidth=0.5, alpha=0.5)
             ax_aar.legend(fontsize=9, framealpha=0.9)
-            ax_aar.grid(True, alpha=0.3, linestyle='--')
+            ax_aar.grid(True, alpha=0.3, linestyle="--")
 
             # Format CAAR plot
-            ax_caar.set_title(f'{event_type.capitalize()} Events: Cumulative Average Abnormal Returns',
-                            fontsize=12, fontweight='bold')
-            ax_caar.set_xlabel('Event Day', fontsize=11)
-            ax_caar.set_ylabel('CAAR', fontsize=11)
-            ax_caar.axhline(y=0, color='black', linestyle='-', linewidth=0.5, alpha=0.5)
-            ax_caar.axvline(x=0, color='red', linestyle='--', linewidth=0.5, alpha=0.5)
+            ax_caar.set_title(
+                f"{event_type.capitalize()} Events: Cumulative Average Abnormal Returns", fontsize=12, fontweight="bold"
+            )
+            ax_caar.set_xlabel("Event Day", fontsize=11)
+            ax_caar.set_ylabel("CAAR", fontsize=11)
+            ax_caar.axhline(y=0, color="black", linestyle="-", linewidth=0.5, alpha=0.5)
+            ax_caar.axvline(x=0, color="red", linestyle="--", linewidth=0.5, alpha=0.5)
             ax_caar.legend(fontsize=9, framealpha=0.9)
-            ax_caar.grid(True, alpha=0.3, linestyle='--')
+            ax_caar.grid(True, alpha=0.3, linestyle="--")
 
             plot_idx += 1
 
@@ -635,18 +655,21 @@ class RobustnessChecks:
         save_dir = Path(save_path)
         save_dir.mkdir(parents=True, exist_ok=True)
         save_file = save_dir / "event_window_sensitivity.png"
-        plt.savefig(save_file, dpi=300, bbox_inches='tight')
+        plt.savefig(save_file, dpi=300, bbox_inches="tight")
         print(f"\nVisualization saved: {save_file}")
 
         plt.show()
 
         return fig
 
-    def run_all_robustness_checks(self, cryptos: List[str] = None,
-                                 run_ohlc: bool = True,
-                                 run_placebo: bool = True,
-                                 run_winsorization: bool = True,
-                                 run_event_window: bool = True) -> Dict:
+    def run_all_robustness_checks(
+        self,
+        cryptos: List[str] = None,
+        run_ohlc: bool = True,
+        run_placebo: bool = True,
+        run_winsorization: bool = True,
+        run_event_window: bool = True,
+    ) -> Dict:
         """
         Run all robustness checks.
 
@@ -667,47 +690,49 @@ class RobustnessChecks:
         all_results = {}
 
         if run_ohlc:
-            all_results['ohlc_volatility'] = self.check_ohlc_volatility(cryptos)
+            all_results["ohlc_volatility"] = self.check_ohlc_volatility(cryptos)
 
         if run_placebo:
-            all_results['placebo_test'] = self.run_placebo_test()
+            all_results["placebo_test"] = self.run_placebo_test()
 
         if run_winsorization:
-            all_results['winsorization'] = self.check_winsorization_robustness(cryptos)
+            all_results["winsorization"] = self.check_winsorization_robustness(cryptos)
 
         if run_event_window:
-            all_results['event_window'] = self.check_event_window_sensitivity()
+            all_results["event_window"] = self.check_event_window_sensitivity()
             # Also create visualization
-            if all_results['event_window']:
-                self.visualize_window_sensitivity(all_results['event_window'])
+            if all_results["event_window"]:
+                self.visualize_window_sensitivity(all_results["event_window"])
 
         # Summary
         print("\n" + "=" * 60)
         print("ROBUSTNESS CHECKS SUMMARY")
         print("=" * 60)
 
-        if 'ohlc_volatility' in all_results:
+        if "ohlc_volatility" in all_results:
             print("\n1. OHLC Volatility Check:")
-            for crypto, res in all_results['ohlc_volatility'].items():
+            for crypto, res in all_results["ohlc_volatility"].items():
                 print(f"   {crypto.upper()}: Correlation = {res['correlation']:.4f}")
 
-        if 'placebo_test' in all_results:
+        if "placebo_test" in all_results:
             print("\n2. Placebo Test:")
-            placebo = all_results['placebo_test']
-            print(f"   Real events exceed 95th percentile: "
-                  f"Infra={placebo['infrastructure_exceeds_95pct']*100:.1f}%, "
-                  f"Reg={placebo['regulatory_exceeds_95pct']*100:.1f}%")
+            placebo = all_results["placebo_test"]
+            print(
+                f"   Real events exceed 95th percentile: "
+                f"Infra={placebo['infrastructure_exceeds_95pct']*100:.1f}%, "
+                f"Reg={placebo['regulatory_exceeds_95pct']*100:.1f}%"
+            )
 
-        if 'winsorization' in all_results:
+        if "winsorization" in all_results:
             print("\n3. Winsorization Robustness:")
-            for crypto, res in all_results['winsorization'].items():
-                if 'aic_improvement' in res:
-                    better = 'Winsorized' if res['aic_improvement'] < 0 else 'Raw'
+            for crypto, res in all_results["winsorization"].items():
+                if "aic_improvement" in res:
+                    better = "Winsorized" if res["aic_improvement"] < 0 else "Raw"
                     print(f"   {crypto.upper()}: Better model = {better}")
 
-        if 'event_window' in all_results:
+        if "event_window" in all_results:
             print("\n4. Event Window Sensitivity:")
-            for event_type, windows in all_results['event_window'].items():
+            for event_type, windows in all_results["event_window"].items():
                 if isinstance(windows, dict):
                     window_sizes = list(windows.keys())
                     if window_sizes:
@@ -716,16 +741,17 @@ class RobustnessChecks:
                         if len(window_sizes) >= 2:
                             main_window = min(window_sizes)
                             robust_window = max(window_sizes)
-                            main_n = windows[main_window]['n_events']
-                            robust_n = windows[robust_window]['n_events']
-                            print(f"     Events analyzed: [{-main_window},+{main_window}]={main_n}, [{-robust_window},+{robust_window}]={robust_n}")
+                            main_n = windows[main_window]["n_events"]
+                            robust_n = windows[robust_window]["n_events"]
+                            print(
+                                f"     Events analyzed: [{-main_window},+{main_window}]={main_n}, [{-robust_window},+{robust_window}]={robust_n}"
+                            )
 
         return all_results
 
-
-def run_robustness_checks(cryptos: Optional[List[str]] = None,
-                         run_bootstrap: bool = False,
-                         n_bootstrap: int = 500) -> Dict:
+def run_robustness_checks(
+    cryptos: Optional[List[str]] = None, run_bootstrap: bool = False, n_bootstrap: int = 500
+) -> Dict:
     """
     Convenience function to run all robustness checks.
 
@@ -743,16 +769,17 @@ def run_robustness_checks(cryptos: Optional[List[str]] = None,
     # Optionally add bootstrap
     if run_bootstrap:
         from bootstrap_inference import run_bootstrap_analysis
+
         print("\n" + "=" * 60)
         print("BOOTSTRAP INFERENCE")
         print("=" * 60)
 
         # Load BTC data for bootstrap example
         data_prep = DataPreparation()  # Will use config.DATA_DIR by default
-        btc_data = data_prep.prepare_crypto_data('btc', include_events=False, include_sentiment=False)
-        returns = btc_data['returns_winsorized'].dropna()
+        btc_data = data_prep.prepare_crypto_data("btc", include_events=False, include_sentiment=False)
+        returns = btc_data["returns_winsorized"].dropna()
 
-        bootstrap_results = run_bootstrap_analysis(returns, 'TARCH', n_bootstrap)
-        results['bootstrap'] = bootstrap_results
+        bootstrap_results = run_bootstrap_analysis(returns, "TARCH", n_bootstrap)
+        results["bootstrap"] = bootstrap_results
 
     return results

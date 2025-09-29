@@ -6,14 +6,12 @@ Implements residual-based bootstrap for confidence intervals.
 import numpy as np
 import pandas as pd
 from arch import arch_model
-from typing import Dict, List, Tuple, Optional
-import warnings
+from typing import Dict, List
 from tqdm import tqdm
 import sys
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent))
-
 
 class BootstrapInference:
     """
@@ -35,9 +33,9 @@ class BootstrapInference:
         self.seed = seed
         np.random.seed(seed)
 
-    def residual_bootstrap_tarch(self, model_type: str = 'TARCH',
-                                include_leverage: bool = True,
-                                show_progress: bool = True) -> Dict:
+    def residual_bootstrap_tarch(
+        self, model_type: str = "TARCH", include_leverage: bool = True, show_progress: bool = True
+    ) -> Dict:
         """
         Perform residual-based bootstrap for TARCH model.
 
@@ -51,12 +49,12 @@ class BootstrapInference:
         """
         # Step 1: Estimate original model
         print(f"Estimating original {model_type} model...")
-        if model_type == 'TARCH' and include_leverage:
-            original_model = arch_model(self.returns, vol='GARCH', p=1, o=1, q=1, dist='StudentsT')
+        if model_type == "TARCH" and include_leverage:
+            original_model = arch_model(self.returns, vol="GARCH", p=1, o=1, q=1, dist="StudentsT")
         else:
-            original_model = arch_model(self.returns, vol='GARCH', p=1, q=1, dist='StudentsT')
+            original_model = arch_model(self.returns, vol="GARCH", p=1, q=1, dist="StudentsT")
 
-        original_fit = original_model.fit(disp='off')
+        original_fit = original_model.fit(disp="off")
 
         # Extract original parameters
         original_params = dict(original_fit.params)
@@ -69,7 +67,9 @@ class BootstrapInference:
         bootstrap_params = []
         convergence_count = 0
 
-        iterator = tqdm(range(self.n_bootstrap), desc="Bootstrap replications") if show_progress else range(self.n_bootstrap)
+        iterator = (
+            tqdm(range(self.n_bootstrap), desc="Bootstrap replications") if show_progress else range(self.n_bootstrap)
+        )
 
         for b in iterator:
             # Resample standardized residuals with replacement
@@ -78,19 +78,16 @@ class BootstrapInference:
             bootstrap_std_resid = std_residuals.iloc[bootstrap_indices].values
 
             # Generate bootstrap returns using original volatility structure
-            bootstrap_returns = pd.Series(
-                bootstrap_std_resid * cond_vol.values,
-                index=self.returns.index
-            )
+            bootstrap_returns = pd.Series(bootstrap_std_resid * cond_vol.values, index=self.returns.index)
 
             # Estimate model on bootstrap sample
             try:
-                if model_type == 'TARCH' and include_leverage:
-                    boot_model = arch_model(bootstrap_returns, vol='GARCH', p=1, o=1, q=1, dist='StudentsT')
+                if model_type == "TARCH" and include_leverage:
+                    boot_model = arch_model(bootstrap_returns, vol="GARCH", p=1, o=1, q=1, dist="StudentsT")
                 else:
-                    boot_model = arch_model(bootstrap_returns, vol='GARCH', p=1, q=1, dist='StudentsT')
+                    boot_model = arch_model(bootstrap_returns, vol="GARCH", p=1, q=1, dist="StudentsT")
 
-                boot_fit = boot_model.fit(disp='off', options={'maxiter': 500})
+                boot_fit = boot_model.fit(disp="off", options={"maxiter": 500})
 
                 if boot_fit.convergence_flag == 0:
                     bootstrap_params.append(dict(boot_fit.params))
@@ -108,16 +105,16 @@ class BootstrapInference:
         bootstrap_stats = self._calculate_bootstrap_statistics(bootstrap_params)
 
         return {
-            'original_params': original_params,
-            'bootstrap_params': bootstrap_params,
-            'confidence_intervals': confidence_intervals,
-            'bootstrap_stats': bootstrap_stats,
-            'convergence_rate': convergence_count / self.n_bootstrap
+            "original_params": original_params,
+            "bootstrap_params": bootstrap_params,
+            "confidence_intervals": confidence_intervals,
+            "bootstrap_stats": bootstrap_stats,
+            "convergence_rate": convergence_count / self.n_bootstrap,
         }
 
-    def _calculate_percentile_ci(self, bootstrap_params: List[Dict],
-                                original_params: Dict,
-                                alpha: float = 0.05) -> Dict:
+    def _calculate_percentile_ci(
+        self, bootstrap_params: List[Dict], original_params: Dict, alpha: float = 0.05
+    ) -> Dict:
         """
         Calculate percentile confidence intervals.
 
@@ -146,12 +143,12 @@ class BootstrapInference:
                     ci_upper = param_values.quantile(1 - alpha / 2)
 
                     ci_dict[param_name] = {
-                        'original': original_params[param_name],
-                        'ci_lower': ci_lower,
-                        'ci_upper': ci_upper,
-                        'ci_width': ci_upper - ci_lower,
-                        'bootstrap_mean': param_values.mean(),
-                        'bootstrap_std': param_values.std()
+                        "original": original_params[param_name],
+                        "ci_lower": ci_lower,
+                        "ci_upper": ci_upper,
+                        "ci_width": ci_upper - ci_lower,
+                        "bootstrap_mean": param_values.mean(),
+                        "bootstrap_std": param_values.std(),
                     }
 
         return ci_dict
@@ -173,29 +170,29 @@ class BootstrapInference:
         stats = {}
 
         # Focus on key parameters
-        key_params = ['omega', 'alpha[1]', 'beta[1]', 'gamma[1]', 'nu']
+        key_params = ["omega", "alpha[1]", "beta[1]", "gamma[1]", "nu"]
 
         for param in key_params:
             if param in params_df.columns:
                 values = params_df[param].dropna()
                 if len(values) > 0:
                     stats[param] = {
-                        'mean': values.mean(),
-                        'median': values.median(),
-                        'std': values.std(),
-                        'skewness': values.skew(),
-                        'kurtosis': values.kurtosis(),
-                        'min': values.min(),
-                        'max': values.max()
+                        "mean": values.mean(),
+                        "median": values.median(),
+                        "std": values.std(),
+                        "skewness": values.skew(),
+                        "kurtosis": values.kurtosis(),
+                        "min": values.min(),
+                        "max": values.max(),
                     }
 
         # Calculate persistence (alpha + beta + gamma/2 for TARCH)
-        if 'alpha[1]' in params_df.columns and 'beta[1]' in params_df.columns:
-            alpha_vals = params_df['alpha[1]'].dropna()
-            beta_vals = params_df['beta[1]'].dropna()
+        if "alpha[1]" in params_df.columns and "beta[1]" in params_df.columns:
+            alpha_vals = params_df["alpha[1]"].dropna()
+            beta_vals = params_df["beta[1]"].dropna()
 
-            if 'gamma[1]' in params_df.columns:
-                gamma_vals = params_df['gamma[1]'].dropna()
+            if "gamma[1]" in params_df.columns:
+                gamma_vals = params_df["gamma[1]"].dropna()
                 # Align lengths
                 min_len = min(len(alpha_vals), len(beta_vals), len(gamma_vals))
                 persistence = alpha_vals[:min_len] + beta_vals[:min_len] + gamma_vals[:min_len] / 2
@@ -203,19 +200,19 @@ class BootstrapInference:
                 min_len = min(len(alpha_vals), len(beta_vals))
                 persistence = alpha_vals[:min_len] + beta_vals[:min_len]
 
-            stats['persistence'] = {
-                'mean': persistence.mean(),
-                'median': persistence.median(),
-                'std': persistence.std(),
-                'ci_lower': persistence.quantile(0.025),
-                'ci_upper': persistence.quantile(0.975)
+            stats["persistence"] = {
+                "mean": persistence.mean(),
+                "median": persistence.median(),
+                "std": persistence.std(),
+                "ci_lower": persistence.quantile(0.025),
+                "ci_upper": persistence.quantile(0.975),
             }
 
         return stats
 
-    def bootstrap_event_coefficients(self, data_with_events: pd.DataFrame,
-                                   event_columns: List[str],
-                                   n_bootstrap: int = 100) -> Dict:
+    def bootstrap_event_coefficients(
+        self, data_with_events: pd.DataFrame, event_columns: List[str], n_bootstrap: int = 100
+    ) -> Dict:
         """
         Bootstrap confidence intervals for event coefficients.
         Implements residual bootstrap while preserving event structure.
@@ -232,19 +229,19 @@ class BootstrapInference:
 
         # Import required modules here to avoid circular import
         from garch_models import GARCHModels
-        import warnings
-        warnings.filterwarnings('ignore')
+
+        warnings.filterwarnings("ignore")
 
         # Extract returns
-        returns = data_with_events['returns_winsorized'].dropna()
+        returns = data_with_events["returns_winsorized"].dropna()
 
         # Fit original model to get baseline
         print("Fitting baseline TARCH-X model...")
-        estimator = GARCHModels(data_with_events, 'bootstrap')
+        estimator = GARCHModels(data_with_events, "bootstrap")
         baseline_model = estimator.estimate_tarch_x(use_individual_events=False)
 
         if not baseline_model.convergence:
-            return {'error': 'Baseline model failed to converge'}
+            return {"error": "Baseline model failed to converge"}
 
         # Extract baseline coefficients
         baseline_coeffs = {}
@@ -273,7 +270,7 @@ class BootstrapInference:
 
             # Estimate model on bootstrap sample
             try:
-                boot_estimator = GARCHModels(bootstrap_data, 'bootstrap')
+                boot_estimator = GARCHModels(bootstrap_data, "bootstrap")
                 boot_model = boot_estimator.estimate_tarch_x(use_individual_events=False)
 
                 if boot_model.convergence and boot_model.event_effects:
@@ -291,17 +288,17 @@ class BootstrapInference:
         for col in event_columns:
             if len(bootstrap_coeffs[col]) > 0:
                 ci_results[col] = {
-                    'baseline': baseline_coeffs.get(col, np.nan),
-                    'bootstrap_mean': np.mean(bootstrap_coeffs[col]),
-                    'bootstrap_std': np.std(bootstrap_coeffs[col]),
-                    'ci_lower': np.percentile(bootstrap_coeffs[col], 2.5),
-                    'ci_upper': np.percentile(bootstrap_coeffs[col], 97.5)
+                    "baseline": baseline_coeffs.get(col, np.nan),
+                    "bootstrap_mean": np.mean(bootstrap_coeffs[col]),
+                    "bootstrap_std": np.std(bootstrap_coeffs[col]),
+                    "ci_lower": np.percentile(bootstrap_coeffs[col], 2.5),
+                    "ci_upper": np.percentile(bootstrap_coeffs[col], 97.5),
                 }
 
         return {
-            'baseline_coefficients': baseline_coeffs,
-            'bootstrap_results': ci_results,
-            'convergence_rate': convergence_count / n_bootstrap
+            "baseline_coefficients": baseline_coeffs,
+            "bootstrap_results": ci_results,
+            "convergence_rate": convergence_count / n_bootstrap,
         }
 
     def create_bootstrap_table(self, bootstrap_results: Dict) -> pd.DataFrame:
@@ -314,28 +311,29 @@ class BootstrapInference:
         Returns:
             DataFrame with formatted results
         """
-        if 'confidence_intervals' not in bootstrap_results:
+        if "confidence_intervals" not in bootstrap_results:
             return pd.DataFrame()
 
-        ci_data = bootstrap_results['confidence_intervals']
+        ci_data = bootstrap_results["confidence_intervals"]
 
         table_data = []
         for param_name, param_ci in ci_data.items():
-            table_data.append({
-                'Parameter': param_name,
-                'Original Estimate': f"{param_ci['original']:.6f}",
-                'Bootstrap Mean': f"{param_ci['bootstrap_mean']:.6f}",
-                'Bootstrap Std': f"{param_ci['bootstrap_std']:.6f}",
-                '95% CI Lower': f"{param_ci['ci_lower']:.6f}",
-                '95% CI Upper': f"{param_ci['ci_upper']:.6f}"
-            })
+            table_data.append(
+                {
+                    "Parameter": param_name,
+                    "Original Estimate": f"{param_ci['original']:.6f}",
+                    "Bootstrap Mean": f"{param_ci['bootstrap_mean']:.6f}",
+                    "Bootstrap Std": f"{param_ci['bootstrap_std']:.6f}",
+                    "95% CI Lower": f"{param_ci['ci_lower']:.6f}",
+                    "95% CI Upper": f"{param_ci['ci_upper']:.6f}",
+                }
+            )
 
         return pd.DataFrame(table_data)
 
-
-
-def run_bootstrap_analysis(returns: pd.Series, model_type: str = 'TARCH',
-                         n_bootstrap: int = 500, seed: int = 42) -> Dict:
+def run_bootstrap_analysis(
+    returns: pd.Series, model_type: str = "TARCH", n_bootstrap: int = 500, seed: int = 42
+) -> Dict:
     """
     Convenience function to run bootstrap analysis.
 

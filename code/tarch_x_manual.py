@@ -11,7 +11,7 @@ Model Specification:
 Where:
 - ω: intercept (omega)
 - α₁: ARCH effect (alpha)
-- γ₁: leverage/asymmetry effect (gamma) 
+- γ₁: leverage/asymmetry effect (gamma)
 - β₁: GARCH effect (beta)
 - δⱼ: coefficients on exogenous variables x_{j,t}
 - I(ε_{t-1}<0): indicator function for negative returns
@@ -24,14 +24,13 @@ import pandas as pd
 from scipy.optimize import minimize
 from scipy.stats import t as student_t
 from scipy.special import gamma
-import warnings
 from typing import Dict, List, Tuple, Optional, Union
 from dataclasses import dataclass
-
 
 @dataclass
 class TARCHXResults:
     """Container for TARCH-X estimation results."""
+
     converged: bool
     params: Dict[str, float]
     std_errors: Dict[str, float]
@@ -45,7 +44,7 @@ class TARCHXResults:
     sentiment_effects: Dict[str, float]
     leverage_effect: float
     iterations: int
-    
+
     def summary(self) -> str:
         """Generate summary statistics."""
         summary = f"""
@@ -66,35 +65,34 @@ nu        = {self.params.get('nu', np.nan):.6f} ({self.pvalues.get('nu', np.nan)
 
 Event Effects:
 --------------"""
-        
+
         for event, coef in self.event_effects.items():
             pval = self.pvalues.get(event, np.nan)
             summary += f"\n{event:<20} = {coef:+.6f} ({pval:.4f})"
-            
+
         if self.sentiment_effects:
             summary += "\n\nSentiment Effects:\n------------------"
             for sent, coef in self.sentiment_effects.items():
                 pval = self.pvalues.get(sent, np.nan)
                 summary += f"\n{sent:<20} = {coef:+.6f} ({pval:.4f})"
-        
-        return summary
 
+        return summary
 
 class TARCHXEstimator:
     """
     Manual TARCH-X model estimator with exogenous variables in variance equation.
     """
-    
+
     def __init__(self, returns: pd.Series, exog_vars: Optional[pd.DataFrame] = None):
         """
         Initialize TARCH-X estimator.
-        
+
         Args:
             returns: Series of log returns (already multiplied by 100)
             exog_vars: DataFrame of exogenous variables for variance equation
         """
         self.returns = returns.dropna()
-        
+
         if exog_vars is not None:
             # Align exogenous variables with returns
             self.exog_vars = exog_vars.loc[self.returns.index].fillna(0)
@@ -106,238 +104,229 @@ class TARCHXEstimator:
             self.has_exog = False
             self.n_exog = 0
             self.exog_names = []
-        
+
         self.n_obs = len(self.returns)
-        self.param_names = ['omega', 'alpha', 'gamma', 'beta', 'nu'] + self.exog_names
+        self.param_names = ["omega", "alpha", "gamma", "beta", "nu"] + self.exog_names
         self.n_params = 5 + self.n_exog
-        
+
     def _unpack_params(self, params: np.ndarray) -> Dict[str, float]:
         """Unpack parameter vector into named dictionary."""
-        param_dict = {
-            'omega': params[0],
-            'alpha': params[1], 
-            'gamma': params[2],
-            'beta': params[3],
-            'nu': params[4]
-        }
-        
+        param_dict = {"omega": params[0], "alpha": params[1], "gamma": params[2], "beta": params[3], "nu": params[4]}
+
         # Add exogenous variable coefficients
         for i, name in enumerate(self.exog_names):
             param_dict[name] = params[5 + i]
-            
+
         return param_dict
-    
+
     def _variance_recursion(self, params: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
         Compute conditional variance and residuals using recursion.
-        
+
         Args:
             params: Parameter vector [omega, alpha, gamma, beta, nu, delta1, delta2, ...]
-            
+
         Returns:
             Tuple of (conditional_variance, residuals)
         """
         param_dict = self._unpack_params(params)
-        omega = param_dict['omega']
-        alpha = param_dict['alpha']
-        gamma = param_dict['gamma'] 
-        beta = param_dict['beta']
-        
+        omega = param_dict["omega"]
+        alpha = param_dict["alpha"]
+        gamma = param_dict["gamma"]
+        beta = param_dict["beta"]
+
         # Initialize arrays
         variance = np.zeros(self.n_obs)
         # Demean returns to create proper residuals for GARCH estimation
         mean_return = self.returns.mean()
         residuals = (self.returns - mean_return).values
-        
+
         # Initialize variance (unconditional variance estimate)
         variance[0] = np.var(self.returns)
-        
+
         # Recursive computation
         for t in range(1, self.n_obs):
             # Previous squared residual
-            eps_sq_prev = residuals[t-1] ** 2
-            
+            eps_sq_prev = residuals[t - 1] ** 2
+
             # Leverage term (negative return indicator)
-            leverage_term = gamma * eps_sq_prev * (residuals[t-1] < 0)
-            
+            leverage_term = gamma * eps_sq_prev * (residuals[t - 1] < 0)
+
             # Base TARCH terms
-            variance[t] = (omega + 
-                          alpha * eps_sq_prev + 
-                          leverage_term + 
-                          beta * variance[t-1])
-            
+            variance[t] = omega + alpha * eps_sq_prev + leverage_term + beta * variance[t - 1]
+
             # Add exogenous variables if present
             if self.has_exog:
                 for i, exog_name in enumerate(self.exog_names):
                     delta = param_dict[exog_name]
                     exog_value = self.exog_vars.iloc[t, i]
                     variance[t] += delta * exog_value
-            
+
             # Ensure variance is positive
             variance[t] = max(variance[t], 1e-8)
-        
+
         return variance, residuals
-    
+
     def _log_likelihood(self, params: np.ndarray) -> float:
         """
         Compute negative log-likelihood for Student-t TARCH-X model.
-        
+
         Args:
             params: Parameter vector
-            
+
         Returns:
             Negative log-likelihood value
         """
         try:
             param_dict = self._unpack_params(params)
-            nu = param_dict['nu']
-            
+            nu = param_dict["nu"]
+
             # Compute conditional variance
             variance, residuals = self._variance_recursion(params)
-            
+
             # Standardized residuals
             std_residuals = residuals / np.sqrt(variance)
-            
+
             # Student-t log-likelihood (excluding constants)
-            # L(θ) = Σ[log Γ((ν+1)/2) - log Γ(ν/2) - 0.5*log(π(ν-2)) - 0.5*log(σ²_t) 
+            # L(θ) = Σ[log Γ((ν+1)/2) - log Γ(ν/2) - 0.5*log(π(ν-2)) - 0.5*log(σ²_t)
             #        - ((ν+1)/2)*log(1 + ε²_t/(σ²_t*(ν-2)))]
-            
+
             log_lik = 0
             for t in range(self.n_obs):
                 # Log of gamma functions
-                log_gamma_term = (np.log(gamma((nu + 1) / 2)) - 
-                                 np.log(gamma(nu / 2)) - 
-                                 0.5 * np.log(np.pi * (nu - 2)))
-                
+                log_gamma_term = np.log(gamma((nu + 1) / 2)) - np.log(gamma(nu / 2)) - 0.5 * np.log(np.pi * (nu - 2))
+
                 # Variance term
                 log_var_term = -0.5 * np.log(variance[t])
-                
+
                 # Density term
-                density_term = -((nu + 1) / 2) * np.log(1 + std_residuals[t]**2 / (nu - 2))
-                
+                density_term = -((nu + 1) / 2) * np.log(1 + std_residuals[t] ** 2 / (nu - 2))
+
                 log_lik += log_gamma_term + log_var_term + density_term
-            
+
             # Return negative log-likelihood for minimization
             return -log_lik
-            
+
         except (ValueError, OverflowError, RuntimeWarning):
             # Return large positive value if computation fails
             return 1e8
-    
+
     def _parameter_constraints(self) -> List[Dict]:
         """Define parameter constraints for optimization."""
         constraints = [
-            {'type': 'ineq', 'fun': lambda x: x[0] - 1e-8},  # omega > 0
-            {'type': 'ineq', 'fun': lambda x: x[1] - 1e-8},  # alpha > 0  
-            {'type': 'ineq', 'fun': lambda x: x[3] - 1e-8},  # beta > 0
-            {'type': 'ineq', 'fun': lambda x: x[4] - 2.1},   # nu > 2 (for finite variance)
-            {'type': 'ineq', 'fun': lambda x: 50 - x[4]},    # nu < 50 (for numerical stability)
+            {"type": "ineq", "fun": lambda x: x[0] - 1e-8},  # omega > 0
+            {"type": "ineq", "fun": lambda x: x[1] - 1e-8},  # alpha > 0
+            {"type": "ineq", "fun": lambda x: x[3] - 1e-8},  # beta > 0
+            {"type": "ineq", "fun": lambda x: x[4] - 2.1},  # nu > 2 (for finite variance)
+            {"type": "ineq", "fun": lambda x: 50 - x[4]},  # nu < 50 (for numerical stability)
             # Stationarity: alpha + beta + gamma/2 < 1
-            {'type': 'ineq', 'fun': lambda x: 0.999 - (x[1] + x[3] + x[2]/2)}
+            {"type": "ineq", "fun": lambda x: 0.999 - (x[1] + x[3] + x[2] / 2)},
         ]
         return constraints
-    
+
     def _get_starting_values(self) -> np.ndarray:
         """Generate reasonable starting values for optimization."""
         # Estimate initial variance
         sample_var = np.var(self.returns)
-        
+
         # Starting values based on typical GARCH estimates
-        start_vals = np.array([
-            sample_var * 0.1,  # omega (small fraction of unconditional variance)
-            0.05,              # alpha 
-            0.05,              # gamma (leverage effect)
-            0.85,              # beta (high persistence)
-            5.0                # nu (moderate heavy tails)
-        ])
-        
+        start_vals = np.array(
+            [
+                sample_var * 0.1,  # omega (small fraction of unconditional variance)
+                0.05,  # alpha
+                0.05,  # gamma (leverage effect)
+                0.85,  # beta (high persistence)
+                5.0,  # nu (moderate heavy tails)
+            ]
+        )
+
         # Add zeros for exogenous variables (will be estimated)
         if self.has_exog:
             start_vals = np.append(start_vals, np.zeros(self.n_exog))
-        
+
         return start_vals
-    
-    def estimate(self, method: str = 'SLSQP', max_iter: int = 1000) -> TARCHXResults:
+
+    def estimate(self, method: str = "SLSQP", max_iter: int = 1000) -> TARCHXResults:
         """
         Estimate TARCH-X model using maximum likelihood.
-        
+
         Args:
             method: Optimization method ('SLSQP', 'L-BFGS-B', 'trust-constr')
             max_iter: Maximum number of iterations
-            
+
         Returns:
             TARCHXResults object with estimation results
         """
         print(f"Estimating TARCH-X model with {self.n_exog} exogenous variables...")
-        
+
         # Starting values
         start_vals = self._get_starting_values()
-        
+
         # Parameter bounds (alternative to constraints)
         bounds = [
-            (1e-8, None),      # omega > 0
-            (1e-8, 0.3),       # 0 < alpha < 0.3
-            (-0.5, 0.5),       # -0.5 < gamma < 0.5 (leverage can be negative)
-            (1e-8, 0.999),     # 0 < beta < 1
-            (2.1, 50),         # 2 < nu < 50
+            (1e-8, None),  # omega > 0
+            (1e-8, 0.3),  # 0 < alpha < 0.3
+            (-0.5, 0.5),  # -0.5 < gamma < 0.5 (leverage can be negative)
+            (1e-8, 0.999),  # 0 < beta < 1
+            (2.1, 50),  # 2 < nu < 50
         ]
-        
+
         # Add bounds for exogenous variables (can be negative or positive)
         for _ in range(self.n_exog):
             bounds.append((-1.0, 1.0))  # Event/sentiment coefficients bounded
-        
+
         # Optimization
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                
+
                 result = minimize(
                     fun=self._log_likelihood,
                     x0=start_vals,
                     method=method,
                     bounds=bounds,
-                    options={'maxiter': max_iter, 'disp': False}
+                    options={"maxiter": max_iter, "disp": False},
                 )
-            
+
             # Check convergence
             converged = result.success and result.fun < 1e6
-            
+
             if not converged:
                 print(f"  [WARNING] Optimization did not converge: {result.message}")
-            
+
             # Extract results
             optimal_params = result.x
             param_dict = self._unpack_params(optimal_params)
-            
+
             # Compute final variance and residuals
             variance, residuals = self._variance_recursion(optimal_params)
             volatility = pd.Series(np.sqrt(variance), index=self.returns.index)
             residuals_series = pd.Series(residuals, index=self.returns.index)
-            
+
             # Compute standard errors from Hessian
             std_errors, pvalues = self._compute_standard_errors(optimal_params)
-            
+
             # Information criteria
             log_lik = -result.fun
             aic = 2 * self.n_params - 2 * log_lik
             bic = np.log(self.n_obs) * self.n_params - 2 * log_lik
-            
+
             # Separate event and sentiment effects
             event_effects = {}
             sentiment_effects = {}
-            
+
             for name in self.exog_names:
-                if any(event_word in name.lower() for event_word in ['event', 'infrastructure', 'regulatory']):
+                if any(event_word in name.lower() for event_word in ["event", "infrastructure", "regulatory"]):
                     event_effects[name] = param_dict[name]
-                elif any(sent_word in name.lower() for sent_word in ['sentiment', 'gdelt', 'tone']):
+                elif any(sent_word in name.lower() for sent_word in ["sentiment", "gdelt", "tone"]):
                     sentiment_effects[name] = param_dict[name]
                 else:
                     event_effects[name] = param_dict[name]  # Default to event
-            
+
             print(f"  [OK] Converged in {result.nit} iterations")
             print(f"  Log-likelihood: {log_lik:.2f}")
             print(f"  AIC: {aic:.2f}, BIC: {bic:.2f}")
-            
+
             return TARCHXResults(
                 converged=converged,
                 params=param_dict,
@@ -350,13 +339,13 @@ class TARCHXEstimator:
                 residuals=residuals_series,
                 event_effects=event_effects,
                 sentiment_effects=sentiment_effects,
-                leverage_effect=param_dict['gamma'],
-                iterations=result.nit
+                leverage_effect=param_dict["gamma"],
+                iterations=result.nit,
             )
-            
+
         except Exception as e:
             print(f"  [FAIL] Estimation failed: {str(e)}")
-            
+
             # Return failed result
             return TARCHXResults(
                 converged=False,
@@ -371,65 +360,65 @@ class TARCHXEstimator:
                 event_effects={},
                 sentiment_effects={},
                 leverage_effect=np.nan,
-                iterations=0
+                iterations=0,
             )
-    
+
     def _compute_standard_errors(self, params: np.ndarray) -> Tuple[Dict[str, float], Dict[str, float]]:
         """
         Compute standard errors using numerical Hessian.
-        
+
         Args:
             params: Optimal parameter vector
-            
+
         Returns:
             Tuple of (standard_errors_dict, pvalues_dict)
         """
         try:
             # Numerical Hessian computation
             hessian = self._numerical_hessian(params)
-            
+
             # Covariance matrix (inverse of Hessian)
             cov_matrix = np.linalg.inv(hessian)
-            
+
             # Standard errors are square root of diagonal elements
             std_errs = np.sqrt(np.diag(cov_matrix))
-            
+
             # Compute t-statistics and p-values
             t_stats = params / std_errs
-            
+
             # Use Student-t distribution with n-k degrees of freedom
             dof = self.n_obs - self.n_params
             pvals = 2 * (1 - student_t.cdf(np.abs(t_stats), dof))
-            
+
             # Create dictionaries
             std_errors = dict(zip(self.param_names, std_errs))
             pvalues = dict(zip(self.param_names, pvals))
-            
+
             return std_errors, pvalues
-            
+
         except (np.linalg.LinAlgError, ValueError):
             print("  [WARNING] Could not compute standard errors")
-            
+
             # Return NaN values
             std_errors = {name: np.nan for name in self.param_names}
             pvalues = {name: np.nan for name in self.param_names}
-            
+
             return std_errors, pvalues
-    
+
     def _numerical_hessian(self, params: np.ndarray, h: float = 1e-5) -> np.ndarray:
         """
         Compute numerical Hessian matrix using central differences.
-        
+
         Args:
             params: Parameter vector
             h: Step size for numerical differentiation
-            
+
         Returns:
             Hessian matrix
         """
         n = len(params)
         hessian = np.zeros((n, n))
-        
+
         # Central difference approximation for Hessian
         for i in range(n):
             for j in range(n):
@@ -439,81 +428,77 @@ class TARCHXEstimator:
                     params_minus = params.copy()
                     params_plus[i] += h
                     params_minus[i] -= h
-                    
+
                     f_plus = self._log_likelihood(params_plus)
                     f_minus = self._log_likelihood(params_minus)
                     f_center = self._log_likelihood(params)
-                    
-                    hessian[i, j] = (f_plus - 2*f_center + f_minus) / (h**2)
+
+                    hessian[i, j] = (f_plus - 2 * f_center + f_minus) / (h**2)
                 else:
                     # Off-diagonal elements: mixed partial derivatives
                     params_pp = params.copy()
-                    params_pm = params.copy() 
+                    params_pm = params.copy()
                     params_mp = params.copy()
                     params_mm = params.copy()
-                    
+
                     params_pp[i] += h
                     params_pp[j] += h
-                    
+
                     params_pm[i] += h
                     params_pm[j] -= h
-                    
+
                     params_mp[i] -= h
                     params_mp[j] += h
-                    
+
                     params_mm[i] -= h
                     params_mm[j] -= h
-                    
+
                     f_pp = self._log_likelihood(params_pp)
                     f_pm = self._log_likelihood(params_pm)
                     f_mp = self._log_likelihood(params_mp)
                     f_mm = self._log_likelihood(params_mm)
-                    
+
                     hessian[i, j] = (f_pp - f_pm - f_mp + f_mm) / (4 * h**2)
-        
+
         return hessian
 
-
-def estimate_tarch_x_manual(returns: pd.Series, 
-                           exog_vars: Optional[pd.DataFrame] = None,
-                           method: str = 'SLSQP') -> TARCHXResults:
+def estimate_tarch_x_manual(
+    returns: pd.Series, exog_vars: Optional[pd.DataFrame] = None, method: str = "SLSQP"
+) -> TARCHXResults:
     """
     Convenience function to estimate TARCH-X model.
-    
+
     Args:
         returns: Series of log returns (should be in percentage terms)
         exog_vars: DataFrame of exogenous variables
         method: Optimization method
-        
+
     Returns:
         TARCHXResults object
     """
     estimator = TARCHXEstimator(returns, exog_vars)
     return estimator.estimate(method=method)
 
-
 # Example usage for testing
 if __name__ == "__main__":
     # Generate synthetic data for testing
     np.random.seed(42)
     n_obs = 1000
-    
+
     # Synthetic returns with GARCH properties
     returns = np.random.normal(0, 1, n_obs)
     for i in range(1, n_obs):
-        returns[i] = returns[i] * np.sqrt(0.01 + 0.05 * returns[i-1]**2 + 0.9 * 0.01)
-    
-    returns = pd.Series(returns * 100, index=pd.date_range('2020-01-01', periods=n_obs))
-    
+        returns[i] = returns[i] * np.sqrt(0.01 + 0.05 * returns[i - 1] ** 2 + 0.9 * 0.01)
+
+    returns = pd.Series(returns * 100, index=pd.date_range("2020-01-01", periods=n_obs))
+
     # Synthetic event dummies
     event_dummy = np.zeros(n_obs)
     event_dummy[100:107] = 1  # 7-day event window
     event_dummy[500:507] = 1  # Another event
-    
-    exog_df = pd.DataFrame({
-        'D_infrastructure': event_dummy
-    }, index=returns.index)
-    
+
+    exog_df = pd.DataFrame({"D_infrastructure": event_dummy}, index=returns.index)
+
     # Estimate model
     results = estimate_tarch_x_manual(returns, exog_df)
     print(results.summary())
