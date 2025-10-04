@@ -20,6 +20,7 @@ from event_impact_analysis import run_complete_analysis
 from publication_outputs import generate_publication_outputs
 from robustness_checks import run_robustness_checks
 from bootstrap_inference import run_bootstrap_analysis
+import config
 
 
 def save_results_to_csv(results: dict, output_dir: Path):
@@ -67,7 +68,7 @@ def main(run_robustness: bool = False,
     warnings.filterwarnings('ignore')
 
     # Validate data files exist
-    data_path = Path('../data')
+    data_path = Path(config.DATA_DIR)
     required_files = ['btc.csv', 'eth.csv', 'events.csv', 'gdelt.csv']
     missing_files = []
 
@@ -83,7 +84,7 @@ def main(run_robustness: bool = False,
     print("[OK] All required data files found")
 
     # Create output directory
-    output_dir = Path('../outputs/analysis_results')
+    output_dir = Path(config.ANALYSIS_RESULTS_DIR)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Step 1: Data Preparation

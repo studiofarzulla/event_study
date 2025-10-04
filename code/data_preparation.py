@@ -9,7 +9,11 @@ from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timedelta
 import warnings
 from pathlib import Path
-from . import config
+
+try:
+    from . import config
+except ImportError:
+    import config
 
 
 class DataPreparation:
