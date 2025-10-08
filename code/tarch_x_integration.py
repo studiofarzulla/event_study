@@ -1,9 +1,6 @@
 """
 Integration Guide: Manual TARCH-X with Existing Event Study Framework
-====================================================================
-
-This module shows how to integrate the manual TARCH-X implementation
-with your existing cryptocurrency event study codebase.
+===================================================================
 """
 
 import pandas as pd
@@ -11,7 +8,7 @@ import numpy as np
 from pathlib import Path
 import sys
 
-# Add the manual implementation to your imports
+# Add the manual implementation to imports
 sys.path.append(str(Path(__file__).parent))
 from tarch_x_manual import estimate_tarch_x_manual, TARCHXResults
 from data_preparation import DataPreparation
@@ -19,10 +16,6 @@ from garch_models import ModelResults
 
 
 class EnhancedGARCHModels:
-    """
-    Enhanced GARCH model estimator with manual TARCH-X implementation.
-    This replaces the problematic TARCH-X method in your original garch_models.py.
-    """
     
     def __init__(self, data: pd.DataFrame, crypto: str):
         """
@@ -44,16 +37,10 @@ class EnhancedGARCHModels:
     def estimate_tarch_x_manual(self, use_individual_events: bool = False,
                                include_sentiment: bool = True) -> ModelResults:
         """
-        Estimate TARCH-X model using manual implementation.
-        This properly implements exogenous variables in the variance equation.
-        
         Args:
             use_individual_events: If True, use individual event dummies;
                                  if False, use aggregated type dummies  
             include_sentiment: Whether to include sentiment variables
-            
-        Returns:
-            ModelResults object compatible with existing analysis framework
         """
         print(f"Estimating TARCH-X (manual) for {self.crypto}...")
         
@@ -122,7 +109,6 @@ class EnhancedGARCHModels:
                                    include_sentiment: bool) -> pd.DataFrame:
         """
         Prepare exogenous variables for TARCH-X model.
-        This is the same method from your original code.
         """
         exog_vars = []
         
@@ -172,127 +158,3 @@ class EnhancedGARCHModels:
             volatility=pd.Series(),
             residuals=pd.Series()
         )
-
-
-def run_enhanced_analysis_example():
-    """
-    Example of how to use the enhanced TARCH-X implementation 
-    with your existing event study framework.
-    """
-    print("=" * 60)
-    print("ENHANCED TARCH-X ANALYSIS EXAMPLE")
-    print("=" * 60)
-    
-    # Step 1: Load data using your existing preparation
-    data_prep = DataPreparation()  # Will use config.DATA_DIR by default
-    
-    # Test with Bitcoin
-    btc_data = data_prep.prepare_crypto_data(
-        'btc',
-        include_events=True,
-        include_sentiment=True
-    )
-    
-    print(f"Loaded BTC data: {btc_data.shape}")
-    print(f"Event columns: {[col for col in btc_data.columns if col.startswith('D_')]}")
-    
-    # Step 2: Estimate models with enhanced estimator
-    enhanced_estimator = EnhancedGARCHModels(btc_data, 'btc')
-    
-    # Estimate manual TARCH-X
-    tarchx_results = enhanced_estimator.estimate_tarch_x_manual(
-        use_individual_events=False,  # Use aggregated event types
-        include_sentiment=True
-    )
-    
-    # Step 3: Display results
-    if tarchx_results.convergence:
-        print("\n" + "=" * 40)
-        print("TARCH-X ESTIMATION RESULTS")
-        print("=" * 40)
-        
-        print(f"Model converged: {tarchx_results.convergence}")
-        print(f"AIC: {tarchx_results.aic:.2f}")
-        print(f"BIC: {tarchx_results.bic:.2f}")
-        print(f"Log-likelihood: {tarchx_results.log_likelihood:.2f}")
-        
-        print("\nVariance Equation Parameters:")
-        for param in ['omega', 'alpha[1]', 'beta[1]', 'gamma[1]', 'nu']:
-            if param in tarchx_results.parameters:
-                coef = tarchx_results.parameters[param]
-                std_err = tarchx_results.std_errors.get(param, np.nan)
-                p_val = tarchx_results.pvalues.get(param, np.nan)
-                print(f"  {param:<10}: {coef:8.4f} ({std_err:.4f}) [p={p_val:.4f}]")
-        
-        print("\nEvent Effects:")
-        if hasattr(tarchx_results, 'event_effects') and tarchx_results.event_effects:
-            for event, coef in tarchx_results.event_effects.items():
-                p_val = tarchx_results.pvalues.get(event, np.nan)
-                vol_change = coef * 100  # Linear variance effect
-                stars = "***" if p_val < 0.01 else "**" if p_val < 0.05 else "*" if p_val < 0.10 else ""
-                print(f"  {event:<20}: {coef:+8.4f}{stars} ({vol_change:+6.1f}% volatility)")
-        
-        print("\nDiagnostic Information:")
-        persistence = (tarchx_results.parameters.get('alpha[1]', 0) + 
-                      tarchx_results.parameters.get('beta[1]', 0) + 
-                      tarchx_results.parameters.get('gamma[1]', 0) / 2)
-        print(f"  Persistence (α+β+γ/2): {persistence:.4f}")
-        print(f"  Leverage effect (γ): {tarchx_results.leverage_effect:.4f}")
-        print(f"  Student-t df (ν): {tarchx_results.parameters.get('nu', np.nan):.2f}")
-        
-        # Calculate half-life
-        if 0 < persistence < 1:
-            half_life = -np.log(0.5) / np.log(persistence)
-            print(f"  Half-life of shocks: {half_life:.1f} days")
-    
-    return tarchx_results
-
-
-# Advantages of Manual Implementation for Your Thesis
-"""
-ADVANTAGES OF MANUAL TARCH-X IMPLEMENTATION:
-
-1. **Methodological Accuracy**: 
-   - Properly implements exogenous variables in variance equation
-   - No approximations or workarounds needed
-   - Full control over optimization process
-
-2. **Academic Rigor**:
-   - Transparent mathematical implementation
-   - Proper likelihood function specification
-   - Robust standard error computation via numerical Hessian
-
-3. **Thesis Requirements**:
-   - Demonstrates deep understanding of GARCH methodology
-   - Shows ability to implement advanced econometric models
-   - Provides clear academic contribution
-
-4. **Flexibility**:
-   - Can easily modify for different specifications
-   - Can add additional exogenous variables
-   - Can implement alternative distributions
-
-5. **Reproducibility**:
-   - Complete code transparency
-   - No dependence on package-specific implementations
-   - Easy to document in thesis methodology section
-
-6. **Performance**:
-   - Often faster than general-purpose packages
-   - Can optimize for your specific use case
-   - Better convergence control
-
-USING IN YOUR THESIS:
-
-1. Replace your existing estimate_tarch_x() method with estimate_tarch_x_manual()
-2. Document the manual implementation in your methodology section
-3. Emphasize this as a methodological contribution
-4. Use for all your main results and robustness checks
-
-The manual implementation gives you complete control and demonstrates
-advanced econometric skills that will impress your thesis committee.
-"""
-
-if __name__ == "__main__":
-    # Run the example
-    run_enhanced_analysis_example()
