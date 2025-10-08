@@ -38,9 +38,6 @@ ENV/
 env.bak/
 venv.bak/
 
-# Jupyter Notebook
-.ipynb_checkpoints
-
 # PyCharm
 .idea/
 
@@ -61,11 +58,6 @@ htmlcov/
 .nox/
 .hypothesis/
 
-# Data files (be selective)
-# Uncomment if you want to exclude large data files
-# data/*.csv
-# !data/events.csv  # But keep the events file
-# !data/gdelt.csv   # And sentiment data
 
 # Output files (keep directory structure)
 outputs/analysis_results/*
@@ -95,7 +87,7 @@ tmp/
 docs/_build/
 site/
 
-# Claude-specific
+# Claude-specific (if you see this... don't judge)
 .claude/
 
 # Mypy
