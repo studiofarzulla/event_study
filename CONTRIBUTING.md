@@ -1,10 +1,10 @@
 # Contributing to Cryptocurrency Event Study
 
-Thank you for your interest in contributing to this project! This document provides guidelines and instructions for contributing.
+Thank you for your interest in contributing to this project! This document provides guidelines and instructions for contributing. It's fairly generic and straightforward and if anyone does work on this, I salute you my friend. 
 
 ## Code of Conduct
 
-By participating in this project, you agree to abide by our principles of respectful and constructive collaboration.
+By participating in this project, you agree to abide by our principles of respectful and constructive collaboration (no roasting me in the discussion though feel free to email me with it).
 
 ## Getting Started
 
@@ -53,9 +53,9 @@ By participating in this project, you agree to abide by our principles of respec
 ### Code Style
 
 - Follow PEP 8 guidelines for Python code
-- Use meaningful variable and function names
+- Use meaningful variable and function names (please use my style)
 - Maximum line length: 120 characters
-- Use type hints where appropriate
+- Use type hints where appropriate (more the merrier)
 - Format code with `black`:
   ```bash
   black code/
@@ -88,6 +88,7 @@ Follow conventional commit format:
 - `refactor:` Code refactoring
 - `test:` Adding or updating tests
 - `chore:` Maintenance tasks
+- (or just use GitHub Copilot)
 
 Example:
 ```
@@ -108,13 +109,14 @@ When reporting bugs, please include:
 - Complete error message and stack trace
 - Minimal code example to reproduce the issue
 - Expected vs. actual behavior
+- If you manage to run it all. 
 
 ### Feature Requests
 
 For feature requests, please describe:
-- The problem you're trying to solve
+- The problem you're trying to solve (check out my other iteration, there was more problems than solutions)
 - Your proposed solution
-- Alternative solutions you've considered
+- Alternative solutions you've considered (I've considered like 10 different methodologies without hitting API/tech limits, I shall accept graciously other workarounds)
 - Any relevant examples or use cases
 
 ## Submitting Pull Requests
@@ -154,9 +156,9 @@ For feature requests, please describe:
 
 ## Code Review Process
 
-1. Maintainers will review your PR within 5-7 days
+1. Maintainers (me) will review your PR within 5-7 days
 2. Address any requested changes
-3. Once approved, your PR will be merged
+3. Once approved, your PR will be merged (code buddies)
 
 ## Areas for Contribution
 
@@ -168,23 +170,6 @@ For feature requests, please describe:
 - [ ] API error handling improvements
 - [ ] Documentation improvements
 
-### Good First Issues
-Look for issues labeled `good first issue` for beginner-friendly contributions.
-
-## Tips for Contributors
-
-- Start small with documentation fixes or minor bug fixes
-- Ask questions in issues if you need clarification
-- Review existing code to understand the project style
-- Test your changes thoroughly
-- Be patient and respectful in discussions
-
-## Getting Help
-
-- Open an issue for questions
-- Check existing issues and PRs
-- Review the documentation
-- Contact maintainers if needed
 
 ## Recognition
 
@@ -192,5 +177,6 @@ Contributors will be acknowledged in:
 - The project README
 - Release notes
 - Project documentation
+- Poster in my study.
 
-Thank you for contributing to the Cryptocurrency Event Study project!
+Thank you for contributing to my overcomplicated yet beautiful creation!
