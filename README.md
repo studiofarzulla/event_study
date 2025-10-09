@@ -1,7 +1,11 @@
 #  Differential Volatility Responses to Infrastructure and Regulatory Events in Cryptocurrency Markets: A TARCH-X Analysis with Sentiment Decomposition
 
+[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 A comprehensive analysis of differential volatility impacts between Infrastructure and Regulatory events on major cryptocurrencies using GARCH models with sentiment controls.
+
 
 ## Project Overview
 
@@ -166,3 +170,17 @@ For questions or collaboration opportunities, please open an issue or contact mu
 ---
 
 **Note**: Before running the analysis, ensure you have obtained proper API credentials and understand the rate limits for data fetching (or just manually grab the historic data if you want to use other coins/periods)
+
+## Related Work & Profiles
+
+- [ORCID](https://orcid.org/0009-0002-7164-8704)
+-  [Academia.edu](https://kcl.academia.edu/MuradFarzulla)
+-   [LinkedIn](https://www.linkedin.com/in/farzulla)
+
+**Other Projects:**
+-  [Adversarial Security Agents](coming soon)
+-  [DeFi Rug Pull Detection](coming soon)
+
+**Blog/Writing:**
+-  [Personal Site](https://farzulla.com) 
+-  Research journey blog posts & YouTube (coming soon)
