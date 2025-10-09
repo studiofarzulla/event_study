@@ -175,7 +175,7 @@ For questions or collaboration opportunities, please open an issue or contact mu
 
 - [ORCID](https://orcid.org/0009-0002-7164-8704)
 -  [Academia.edu](https://kcl.academia.edu/MuradFarzulla)
--   [LinkedIn](www.linkedin.com/in/farzulla)
+-   [LinkedIn](https://www.linkedin.com/in/farzulla)
 
 **Other Projects:**
 -  [Adversarial Security Agents](coming soon)
